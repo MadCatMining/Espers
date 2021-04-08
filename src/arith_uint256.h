@@ -1,5 +1,10 @@
-#ifndef ESPERS_ARITH_UINT256_H
-#define ESPERS_ARITH_UINT256_H
+
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+#ifndef DIMINUTIVEVAULT_ARITH_UINT256_H
+#define DIMINUTIVEVAULT_ARITH_UINT256_H
 
 // Temporary for migration to opaque uint160/256
 #include "uint256.h"
@@ -16,4 +21,4 @@ public:
 #define ArithToUint256(x) (x)
 #define UintToArith256(x) (x)
 
-#endif // ESPERS_UINT256_H
+#endif // DIMINUTIVEVAULT_UINT256_H

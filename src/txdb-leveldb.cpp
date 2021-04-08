@@ -15,7 +15,6 @@
 #include <memenv/memenv.h>
 
 #include "kernel.h"
-#include "checkpoints.h"
 #include "txdb.h"
 #include "util.h"
 #include "main.h"
@@ -283,26 +282,6 @@ bool CTxDB::WriteBestInvalidTrust(CBigNum bnBestInvalidTrust)
     return Write(string("bnBestInvalidTrust"), bnBestInvalidTrust);
 }
 
-bool CTxDB::ReadSyncCheckpoint(uint256& hashCheckpoint)
-{
-    return Read(string("hashSyncCheckpoint"), hashCheckpoint);
-}
-
-bool CTxDB::WriteSyncCheckpoint(uint256 hashCheckpoint)
-{
-    return Write(string("hashSyncCheckpoint"), hashCheckpoint);
-}
-
-bool CTxDB::ReadCheckpointPubKey(string& strPubKey)
-{
-    return Read(string("strCheckpointPubKey"), strPubKey);
-}
-
-bool CTxDB::WriteCheckpointPubKey(const string& strPubKey)
-{
-    return Write(string("strCheckpointPubKey"), strPubKey);
-}
-
 static CBlockIndex *InsertBlockIndex(uint256 hash)
 {
     if (hash == 0)
@@ -358,25 +337,25 @@ bool CTxDB::LoadBlockIndex()
         uint256 blockHash = diskindex.GetBlockHash();
 
         // Construct block index object
-        CBlockIndex* pindexNew       = InsertBlockIndex(blockHash);
-        pindexNew->pprev             = InsertBlockIndex(diskindex.hashPrev);
-        pindexNew->pnext             = InsertBlockIndex(diskindex.hashNext);
-        pindexNew->nFile             = diskindex.nFile;
-        pindexNew->nBlockPos         = diskindex.nBlockPos;
-        pindexNew->nHeight           = diskindex.nHeight;
-        pindexNew->nMint             = diskindex.nMint;
-        pindexNew->nMoneySupply      = diskindex.nMoneySupply;
-        pindexNew->nFlags            = diskindex.nFlags;
-        pindexNew->nStakeModifier    = diskindex.nStakeModifier;
+        CBlockIndex* pindexNew    = InsertBlockIndex(blockHash);
+        pindexNew->pprev          = InsertBlockIndex(diskindex.hashPrev);
+        pindexNew->pnext          = InsertBlockIndex(diskindex.hashNext);
+        pindexNew->nFile          = diskindex.nFile;
+        pindexNew->nBlockPos      = diskindex.nBlockPos;
+        pindexNew->nHeight        = diskindex.nHeight;
+        pindexNew->nMint          = diskindex.nMint;
+        pindexNew->nMoneySupply   = diskindex.nMoneySupply;
+        pindexNew->nFlags         = diskindex.nFlags;
+        pindexNew->nStakeModifier = diskindex.nStakeModifier;
         pindexNew->bnStakeModifierV2 = diskindex.bnStakeModifierV2;
-        pindexNew->prevoutStake      = diskindex.prevoutStake;
-        pindexNew->nStakeTime        = diskindex.nStakeTime;
-        pindexNew->hashProof         = diskindex.hashProof;
-        pindexNew->nVersion          = diskindex.nVersion;
-        pindexNew->hashMerkleRoot    = diskindex.hashMerkleRoot;
-        pindexNew->nTime             = diskindex.nTime;
-        pindexNew->nBits             = diskindex.nBits;
-        pindexNew->nNonce            = diskindex.nNonce;
+        pindexNew->prevoutStake   = diskindex.prevoutStake;
+        pindexNew->nStakeTime     = diskindex.nStakeTime;
+        pindexNew->hashProof      = diskindex.hashProof;
+        pindexNew->nVersion       = diskindex.nVersion;
+        pindexNew->hashMerkleRoot = diskindex.hashMerkleRoot;
+        pindexNew->nTime          = diskindex.nTime;
+        pindexNew->nBits          = diskindex.nBits;
+        pindexNew->nNonce         = diskindex.nNonce;
 
         // Watch for genesis block
         if (pindexGenesisBlock == NULL && blockHash == Params().HashGenesisBlock())
@@ -428,11 +407,6 @@ bool CTxDB::LoadBlockIndex()
     LogPrintf("LoadBlockIndex(): hashBestChain=%s  height=%d  trust=%s  date=%s\n",
       hashBestChain.ToString(), nBestHeight, CBigNum(nBestChainTrust).ToString(),
       DateTimeStrFormat("%x %H:%M:%S", pindexBest->GetBlockTime()));
-
-    // NovaCoin: load hashSyncCheckpoint
-    if (!ReadSyncCheckpoint(Checkpoints::hashSyncCheckpoint))
-        return error("CTxDB::LoadBlockIndex() : hashSyncCheckpoint not loaded");
-    LogPrintf("LoadBlockIndex(): synchronized checkpoint %s\n", Checkpoints::hashSyncCheckpoint.ToString());
 
     // Load bnBestInvalidTrust, OK if it doesn't exist
     CBigNum bnBestInvalidTrust;

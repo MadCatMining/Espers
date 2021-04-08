@@ -1,8 +1,8 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#ifndef ESPERS_NETBASE_H
-#define ESPERS_NETBASE_H
+#ifndef DIMINUTIVEVAULT_NETBASE_H
+#define DIMINUTIVEVAULT_NETBASE_H
 
 #include <string>
 #include <vector>

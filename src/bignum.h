@@ -3,8 +3,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef ESPERS_BIGNUM_H
-#define ESPERS_BIGNUM_H
+#ifndef DIMINUTIVEVAULT_BIGNUM_H
+#define DIMINUTIVEVAULT_BIGNUM_H
 
 #include "serialize.h"
 #include "uint256.h"

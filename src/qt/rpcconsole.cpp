@@ -9,6 +9,7 @@
 
 #include <QTime>
 #include <QThread>
+#include <QTextEdit>
 #include <QKeyEvent>
 #include <QUrl>
 #include <QScrollBar>
@@ -196,8 +197,9 @@ RPCConsole::RPCConsole(QWidget *parent) :
     ui->setupUi(this);
 
 #ifndef Q_OS_MAC
-//    ui->openDebugLogfileButton->setIcon(QIcon(":/icons/export"));
-//    ui->showCLOptionsButton->setIcon(QIcon(":/icons/options"));
+    ui->openDebugLogfileButton->setIcon(QIcon(":/icons/export"));
+    ui->openConfigurationfileButton->setIcon(QIcon(":/icons/export"));
+    ui->showCLOptionsButton->setIcon(QIcon(":/icons/options"));
 #endif
 
     // Install event filter for up and down arrow
@@ -315,14 +317,14 @@ void RPCConsole::clear()
     // Set default style sheet
     ui->messagesWidget->document()->setDefaultStyleSheet(
                 "table { }"
-                "td.time { color: #808080; padding-top: 3px; } "
-                "td.message { font-family: Monospace; font-size: 12px; } "
-                "td.cmd-request { color: #00C0C0; } "
+                "td.time { color: #4fc2c4; padding-top: 3px; } "
+                "td.message { color: #4fc2c4; font-family: Monospace; font-size: 12px; } "
+                "td.cmd-request { color: #4fc2c4; } "
                 "td.cmd-error { color: red; } "
-                "b { color: #00C0C0; } "
+                "b { color: #4fc2c4; } "
                 );
 
-    message(CMD_REPLY, (tr("Welcome to the Espers RPC console.") + "<br>" +
+    message(CMD_REPLY, (tr("Welcome to the DiminutiveVaultCoin RPC console.") + "<br>" +
                         tr("Use up and down arrows to navigate history, and <b>Ctrl-L</b> to clear screen.") + "<br>" +
                         tr("Type <b>help</b> for an overview of available commands.")), true);
 }
@@ -345,7 +347,14 @@ void RPCConsole::message(int category, const QString &message, bool html)
 
 void RPCConsole::setNumConnections(int count)
 {
-    ui->numberOfConnections->setText(QString::number(count));
+    if (!clientModel)
+        return;
+
+    QString connections = QString::number(count) + " (";
+    connections += tr("In:") + " " + QString::number(clientModel->getNumConnections(CONNECTIONS_IN)) + " / ";
+    connections += tr("Out:") + " " + QString::number(clientModel->getNumConnections(CONNECTIONS_OUT)) + ")";
+
+    ui->numberOfConnections->setText(connections);
 }
 
 void RPCConsole::setNumBlocks(int count)
@@ -427,6 +436,11 @@ void RPCConsole::on_tabWidget_currentChanged(int index)
 void RPCConsole::on_openDebugLogfileButton_clicked()
 {
     GUIUtil::openDebugLogfile();
+}
+
+void RPCConsole::on_openConfigurationfileButton_clicked()
+{
+    GUIUtil::openConfigfile();
 }
 
 void RPCConsole::scrollToEnd()

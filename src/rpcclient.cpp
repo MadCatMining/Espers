@@ -32,16 +32,11 @@ using namespace json_spirit;
 
 Object CallRPC(const string& strMethod, const Array& params)
 {
-    if (mapArgs["-rpcuser"] == "" && mapArgs["-rpcpassword"] == "")
-        throw runtime_error(strprintf(
-            _("You must set rpcpassword=<password> in the configuration file:\n%s\n"
-              "If the file does not exist, create it with owner-readable-only file permissions."),
-                GetConfigFile().string()));
 
     // Connect to localhost
     bool fUseSSL = GetBoolArg("-rpcssl", false);
     asio::io_service io_service;
-    ssl::context context(ssl::context::sslv23);
+    ssl::context context(io_service, ssl::context::sslv23);
     context.set_options(ssl::context::no_sslv2);
     asio::ssl::stream<asio::ip::tcp::socket> sslStream(io_service, context);
     SSLIOStreamDevice<asio::ip::tcp> d(sslStream, fUseSSL);
@@ -57,10 +52,24 @@ Object CallRPC(const string& strMethod, const Array& params)
             throw runtime_error("couldn't connect to server");
     } while (fWait);
 
+    // Find credentials to use
+     std::string strRPCUserColonPass;
+     if (mapArgs["-rpcpassword"] == "") {
+         // Try fall back to cookie-based authentication if no password is provided
+         if (!GetAuthCookie(&strRPCUserColonPass)) {
+             throw runtime_error(strprintf(
+                 _("You must set rpcpassword=<password> in the configuration file:\n%s\n"
+                   "If the file does not exist, create it with owner-readable-only file permissions."),
+                     GetConfigFile().string().c_str()));
+
+         }
+     } else {
+         strRPCUserColonPass = mapArgs["-rpcuser"] + ":" + mapArgs["-rpcpassword"];
+     }
+
     // HTTP basic authentication
-    string strUserPass64 = EncodeBase64(mapArgs["-rpcuser"] + ":" + mapArgs["-rpcpassword"]);
     map<string, string> mapRequestHeaders;
-    mapRequestHeaders["Authorization"] = string("Basic ") + strUserPass64;
+    mapRequestHeaders["Authorization"] = string("Basic ") + EncodeBase64(strRPCUserColonPass);
 
     // Send request
     string strRequest = JSONRPCRequest(strMethod, params, 1);
@@ -106,6 +115,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "stop", 0 },
     { "getaddednodeinfo", 0 },
     { "sendtoaddress", 1 },
+    { "burn", 0 },
     { "settxfee", 0 },
     { "getreceivedbyaddress", 1 },
     { "getreceivedbyaccount", 1 },
@@ -129,11 +139,6 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "walletpassphrase", 2 },
     { "getblocktemplate", 0 },
     { "listsinceblock", 1 },
-    { "sendalert", 2 },
-    { "sendalert", 3 },
-    { "sendalert", 4 },
-    { "sendalert", 5 },
-    { "sendalert", 6 },
     { "sendmany", 1 },
     { "sendmany", 2 },
     { "reservebalance", 0 },
@@ -152,6 +157,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "importprivkey", 2 },
     { "checkkernel", 0 },
     { "checkkernel", 1 },
+    { "submitblock", 1 },
 };
 
 class CRPCConvertTable

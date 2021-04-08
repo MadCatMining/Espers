@@ -2,23 +2,24 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#ifndef ESPERS_UINT256_H
-#define ESPERS_UINT256_H
 
-#include <assert.h>
+#ifndef DIMINUTIVEVAULT_UINT256_H
+#define DIMINUTIVEVAULT_UINT256_H
+
+#include <string>
+#include <vector>
 #include <limits.h>
+#include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
-#include <string>
-#include <vector>
 
 typedef long long  int64;
 typedef unsigned long long  uint64;
 
 
 inline int Testuint256AdHoc(std::vector<std::string> vArg);
-
 
 
 /** Base class without constructors for uint256 and uint160.
@@ -403,7 +404,6 @@ public:
     {
         memset(pn, 0, sizeof(pn));
     }
-
     bool IsNull() const
     {
         for (int i = 0; i < WIDTH; i++)
@@ -919,4 +919,4 @@ inline int Testuint256AdHoc(std::vector<std::string> vArg)
 
 #endif
 
-#endif
+#endif // DIMINUTIVEVAULT_UINT256_H

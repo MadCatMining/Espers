@@ -17,12 +17,6 @@
 #include <boost/version.hpp>
 #include <openssl/rand.h>
 
-#ifdef Q_OS_WIN
-#include <QString>
-#include <QFile>
-#include <QDir>
-#endif
-
 using namespace std;
 using namespace boost;
 
@@ -215,7 +209,7 @@ bool CDBEnv::Salvage(std::string strFile, bool fAggressive,
     while (!strDump.eof() && keyHex != "DATA=END")
     {
         getline(strDump, keyHex);
-        if (keyHex != "DATA_END")
+        if (keyHex != "DATA=END")
         {
             getline(strDump, valueHex);
             vResult.push_back(make_pair(ParseHex(keyHex),ParseHex(valueHex)));
@@ -440,16 +434,6 @@ bool CDB::Rewrite(const string& strFile, const char* pszSkip)
 
 void CDBEnv::Flush(bool fShutdown)
 {
-    #ifdef Q_OS_WIN
-    // TODO: CORRECT THIS
-            QString tmpchkfle = QDir::homePath() + "/AppData/Roaming/ESP/chk.file";
-            //REMOVE FILE IF IT EXISTS
-            if (QFile::exists(tmpchkfle))
-            {
-                QFile::remove(tmpchkfle);
-            }
-    #endif
-
     int64_t nStart = GetTimeMillis();
     // Flush log data to the actual data file
     //  on all files that are not in use

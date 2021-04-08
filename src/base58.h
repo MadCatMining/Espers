@@ -12,8 +12,8 @@
 // - E-mail usually won't line-break if there's no punctuation to break at.
 // - Double-clicking selects the whole number as one word if it's all alphanumeric.
 //
-#ifndef ESPERS_BASE58_H
-#define ESPERS_BASE58_H
+#ifndef DIMINUTIVEVAULT_BASE58_H
+#define DIMINUTIVEVAULT_BASE58_H
 
 #include <string>
 #include <vector>
@@ -257,19 +257,19 @@ public:
  * Script-hash-addresses have version 85 (or 196 testnet).
  * The data vector contains RIPEMD160(SHA256(cscript)), where cscript is the serialized redemption script.
  */
-class CBitcoinAddress;
-class CBitcoinAddressVisitor : public boost::static_visitor<bool>
+class CDiminutiveVaultCoinAddress;
+class CDiminutiveVaultCoinAddressVisitor : public boost::static_visitor<bool>
 {
 private:
-    CBitcoinAddress *addr;
+    CDiminutiveVaultCoinAddress *addr;
 public:
-    CBitcoinAddressVisitor(CBitcoinAddress *addrIn) : addr(addrIn) { }
+    CDiminutiveVaultCoinAddressVisitor(CDiminutiveVaultCoinAddress *addrIn) : addr(addrIn) { }
     bool operator()(const CKeyID &id) const;
     bool operator()(const CScriptID &id) const;
     bool operator()(const CNoDestination &no) const;
 };
 
-class CBitcoinAddress : public CBase58Data
+class CDiminutiveVaultCoinAddress : public CBase58Data
 {
 public:
     bool Set(const CKeyID &id) {
@@ -284,7 +284,7 @@ public:
 
     bool Set(const CTxDestination &dest)
     {
-        return boost::apply_visitor(CBitcoinAddressVisitor(this), dest);
+        return boost::apply_visitor(CDiminutiveVaultCoinAddressVisitor(this), dest);
     }
 
     bool IsValid() const
@@ -295,21 +295,21 @@ public:
         return fCorrectSize && fKnownVersion;
     }
 
-    CBitcoinAddress()
+    CDiminutiveVaultCoinAddress()
     {
     }
 
-    CBitcoinAddress(const CTxDestination &dest)
+    CDiminutiveVaultCoinAddress(const CTxDestination &dest)
     {
         Set(dest);
     }
 
-    CBitcoinAddress(const std::string& strAddress)
+    CDiminutiveVaultCoinAddress(const std::string& strAddress)
     {
         SetString(strAddress);
     }
 
-    CBitcoinAddress(const char* pszAddress)
+    CDiminutiveVaultCoinAddress(const char* pszAddress)
     {
         SetString(pszAddress);
     }
@@ -341,12 +341,12 @@ public:
     }
 };
 
-bool inline CBitcoinAddressVisitor::operator()(const CKeyID &id) const         { return addr->Set(id); }
-bool inline CBitcoinAddressVisitor::operator()(const CScriptID &id) const      { return addr->Set(id); }
-bool inline CBitcoinAddressVisitor::operator()(const CNoDestination &id) const { return false; }
+bool inline CDiminutiveVaultCoinAddressVisitor::operator()(const CKeyID &id) const         { return addr->Set(id); }
+bool inline CDiminutiveVaultCoinAddressVisitor::operator()(const CScriptID &id) const      { return addr->Set(id); }
+bool inline CDiminutiveVaultCoinAddressVisitor::operator()(const CNoDestination &id) const { return false; }
 
 /** A base58-encoded secret key */
-class CBitcoinSecret : public CBase58Data
+class CDiminutiveVaultCoinSecret : public CBase58Data
 {
 public:
     void SetKey(const CKey& vchSecret)
@@ -381,18 +381,18 @@ public:
         return SetString(strSecret.c_str());
     }
 
-    CBitcoinSecret(const CKey& vchSecret)
+    CDiminutiveVaultCoinSecret(const CKey& vchSecret)
     {
         SetKey(vchSecret);
     }
 
-    CBitcoinSecret()
+    CDiminutiveVaultCoinSecret()
     {
     }
 };
 
 
-template<typename K, int Size, CChainParams::Base58Type Type> class CBitcoinExtKeyBase : public CBase58Data
+template<typename K, int Size, CChainParams::Base58Type Type> class CDiminutiveVaultCoinExtKeyBase : public CBase58Data
 {
 public:
     void SetKey(const K &key) {
@@ -407,14 +407,14 @@ public:
         return ret;
     }
 
-    CBitcoinExtKeyBase(const K &key) {
+    CDiminutiveVaultCoinExtKeyBase(const K &key) {
         SetKey(key);
     }
 
-    CBitcoinExtKeyBase() {}
+    CDiminutiveVaultCoinExtKeyBase() {}
 };
 
-typedef CBitcoinExtKeyBase<CExtKey, 74, CChainParams::EXT_SECRET_KEY> CBitcoinExtKey;
-typedef CBitcoinExtKeyBase<CExtPubKey, 74, CChainParams::EXT_PUBLIC_KEY> CBitcoinExtPubKey;
+typedef CDiminutiveVaultCoinExtKeyBase<CExtKey, 74, CChainParams::EXT_SECRET_KEY> CDiminutiveVaultCoinExtKey;
+typedef CDiminutiveVaultCoinExtKeyBase<CExtPubKey, 74, CChainParams::EXT_PUBLIC_KEY> CDiminutiveVaultCoinExtPubKey;
 
-#endif // ESPERS_BASE58_H
+#endif // DIMINUTIVEVAULT_BASE58_H

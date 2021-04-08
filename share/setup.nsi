@@ -1,16 +1,16 @@
-Name NovaCoin
+Name DiminutiveVaultCoin
 
 RequestExecutionLevel highest
 SetCompressor /SOLID lzma
 
 # General Symbol Definitions
 !define REGKEY "SOFTWARE\$(^Name)"
-!define VERSION 0.3.0
-!define COMPANY "NovaCoin project"
-!define URL http://www.novacoin.ru/
+!define VERSION 1.1.0.0
+!define COMPANY "DiminutiveVaultCoin project"
+!define URL http://cryptocollectibles.io/
 
 # MUI Symbol Definitions
-!define MUI_ICON "../share/pixmaps/novacoin.ico"
+!define MUI_ICON "../share/pixmaps/diminutivevaultcoin.ico"
 !define MUI_WELCOMEFINISHPAGE_BITMAP "../share/pixmaps/nsis-wizard.bmp"
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_RIGHT
@@ -19,8 +19,8 @@ SetCompressor /SOLID lzma
 !define MUI_STARTMENUPAGE_REGISTRY_ROOT HKLM
 !define MUI_STARTMENUPAGE_REGISTRY_KEY ${REGKEY}
 !define MUI_STARTMENUPAGE_REGISTRY_VALUENAME StartMenuGroup
-!define MUI_STARTMENUPAGE_DEFAULTFOLDER NovaCoin
-#!define MUI_FINISHPAGE_RUN $INSTDIR\novacoin-qt.exe
+!define MUI_STARTMENUPAGE_DEFAULTFOLDER DiminutiveVaultCoin
+#!define MUI_FINISHPAGE_RUN $INSTDIR\diminutivevaultcoin-qt.exe
 !define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\modern-uninstall.ico"
 !define MUI_UNWELCOMEFINISHPAGE_BITMAP "../share/pixmaps/nsis-wizard.bmp"
 !define MUI_UNFINISHPAGE_NOAUTOCLOSE
@@ -45,14 +45,14 @@ Var StartMenuGroup
 !insertmacro MUI_LANGUAGE English
 
 # Installer attributes
-OutFile novacoin-0.3.0-win32-setup.exe
-InstallDir $PROGRAMFILES\NovaCoin
+OutFile diminutivevaultcoin-0.3.0-win32-setup.exe
+InstallDir $PROGRAMFILES\DiminutiveVaultCoin
 CRCCheck on
 XPStyle on
 BrandingText " "
 ShowInstDetails show
-VIProductVersion 0.3.0.0
-VIAddVersionKey ProductName NovaCoin
+VIProductVersion 1.0.0.0
+VIAddVersionKey ProductName DiminutiveVaultCoin
 VIAddVersionKey ProductVersion "${VERSION}"
 VIAddVersionKey CompanyName "${COMPANY}"
 VIAddVersionKey CompanyWebsite "${URL}"
@@ -66,18 +66,18 @@ ShowUninstDetails show
 Section -Main SEC0000
     SetOutPath $INSTDIR
     SetOverwrite on
-    #File ../release/novacoin-qt.exe
+    #File ../release/diminutivevaultcoin-qt.exe
     File /oname=license.txt ../COPYING
     File /oname=readme.txt ../doc/README_windows.txt
     SetOutPath $INSTDIR\daemon
-    File ../src/novacoind.exe
+    File ../src/diminutivevaultcoind.exe
     SetOutPath $INSTDIR\src
     File /r /x *.exe /x *.o ../src\*.*
     SetOutPath $INSTDIR
     WriteRegStr HKCU "${REGKEY}\Components" Main 1
 
-    # Remove old wxwidgets-based-bitcoin executable and locales:
-    #Delete /REBOOTOK $INSTDIR\novacoin.exe
+    # Remove old wxwidgets-based-diminutivevaultcoin executable and locales:
+    #Delete /REBOOTOK $INSTDIR\diminutivevaultcoin.exe
     #RMDir /r /REBOOTOK $INSTDIR\locale
 SectionEnd
 
@@ -87,7 +87,7 @@ Section -post SEC0001
     WriteUninstaller $INSTDIR\uninstall.exe
     !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
     CreateDirectory $SMPROGRAMS\$StartMenuGroup
-    CreateShortcut "$SMPROGRAMS\$StartMenuGroup\Uninstall NovaCoin.lnk" $INSTDIR\uninstall.exe
+    CreateShortcut "$SMPROGRAMS\$StartMenuGroup\Uninstall DiminutiveVaultCoin.lnk" $INSTDIR\uninstall.exe
     !insertmacro MUI_STARTMENU_WRITE_END
     WriteRegStr HKCU "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$(^Name)" DisplayName "$(^Name)"
     WriteRegStr HKCU "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$(^Name)" DisplayVersion "${VERSION}"
@@ -98,11 +98,11 @@ Section -post SEC0001
     WriteRegDWORD HKCU "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$(^Name)" NoModify 1
     WriteRegDWORD HKCU "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$(^Name)" NoRepair 1
 
-    # bitcoin: URI handling disabled for 0.6.0
-    #    WriteRegStr HKCR "bitcoin" "URL Protocol" ""
-    #    WriteRegStr HKCR "bitcoin" "" "URL:Bitcoin"
-    #    WriteRegStr HKCR "bitcoin\DefaultIcon" "" $INSTDIR\bitcoin-qt.exe
-    #    WriteRegStr HKCR "bitcoin\shell\open\command" "" '"$INSTDIR\bitcoin-qt.exe" "$$1"'
+    # diminutivevaultcoin: URI handling disabled for 0.6.0
+    #    WriteRegStr HKCR "diminutivevaultcoin" "URL Protocol" ""
+    #    WriteRegStr HKCR "diminutivevaultcoin" "" "URL:DiminutiveVaultCoin"
+    #    WriteRegStr HKCR "diminutivevaultcoin\DefaultIcon" "" $INSTDIR\diminutivevaultcoin-qt.exe
+    #    WriteRegStr HKCR "diminutivevaultcoin\shell\open\command" "" '"$INSTDIR\diminutivevaultcoin-qt.exe" "$$1"'
 SectionEnd
 
 # Macro for selecting uninstaller sections
@@ -120,7 +120,7 @@ done${UNSECTION_ID}:
 
 # Uninstaller sections
 Section /o -un.Main UNSEC0000
-    #Delete /REBOOTOK $INSTDIR\novacoin-qt.exe
+    #Delete /REBOOTOK $INSTDIR\diminutivevaultcoin-qt.exe
     Delete /REBOOTOK $INSTDIR\license.txt
     Delete /REBOOTOK $INSTDIR\readme.txt
     RMDir /r /REBOOTOK $INSTDIR\daemon
@@ -130,9 +130,9 @@ SectionEnd
 
 Section -un.post UNSEC0001
     DeleteRegKey HKCU "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$(^Name)"
-    Delete /REBOOTOK "$SMPROGRAMS\$StartMenuGroup\Uninstall NovaCoin.lnk"
-    #Delete /REBOOTOK "$SMPROGRAMS\$StartMenuGroup\Bitcoin.lnk"
-    #Delete /REBOOTOK "$SMSTARTUP\Bitcoin.lnk"
+    Delete /REBOOTOK "$SMPROGRAMS\$StartMenuGroup\Uninstall DiminutiveVaultCoin.lnk"
+    #Delete /REBOOTOK "$SMPROGRAMS\$StartMenuGroup\DiminutiveVaultCoin.lnk"
+    #Delete /REBOOTOK "$SMSTARTUP\DiminutiveVaultCoin.lnk"
     Delete /REBOOTOK $INSTDIR\uninstall.exe
     Delete /REBOOTOK $INSTDIR\debug.log
     Delete /REBOOTOK $INSTDIR\db.log
@@ -140,7 +140,7 @@ Section -un.post UNSEC0001
     DeleteRegValue HKCU "${REGKEY}" Path
     DeleteRegKey /IfEmpty HKCU "${REGKEY}\Components"
     DeleteRegKey /IfEmpty HKCU "${REGKEY}"
-    DeleteRegKey HKCR "novacoin"
+    DeleteRegKey HKCR "diminutivevaultcoin"
     RmDir /REBOOTOK $SMPROGRAMS\$StartMenuGroup
     RmDir /REBOOTOK $INSTDIR
     Push $R0

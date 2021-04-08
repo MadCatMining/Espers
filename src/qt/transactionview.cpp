@@ -5,7 +5,7 @@
 #include "walletmodel.h"
 #include "addresstablemodel.h"
 #include "transactiontablemodel.h"
-#include "bitcoinunits.h"
+#include "diminutivevaultcoinunits.h"
 #include "csvmodelwriter.h"
 #include "transactiondescdialog.h"
 #include "editaddressdialog.h"
@@ -129,6 +129,7 @@ TransactionView::TransactionView(QWidget *parent) :
     QAction *copyTxIDAction = new QAction(tr("Copy transaction ID"), this);
     QAction *editLabelAction = new QAction(tr("Edit label"), this);
     QAction *showDetailsAction = new QAction(tr("Show transaction details"), this);
+    QAction *showBlockBrowser = new QAction(tr("Show transaction in block explorer"), this);
 
     contextMenu = new QMenu();
     contextMenu->addAction(copyAddressAction);
@@ -137,6 +138,7 @@ TransactionView::TransactionView(QWidget *parent) :
     contextMenu->addAction(copyTxIDAction);
     contextMenu->addAction(editLabelAction);
     contextMenu->addAction(showDetailsAction);
+    contextMenu->addAction(showBlockBrowser);
 
     // Connect actions
     connect(dateWidget, SIGNAL(activated(int)), this, SLOT(chooseDate(int)));
@@ -153,6 +155,7 @@ TransactionView::TransactionView(QWidget *parent) :
     connect(copyTxIDAction, SIGNAL(triggered()), this, SLOT(copyTxID()));
     connect(editLabelAction, SIGNAL(triggered()), this, SLOT(editLabel()));
     connect(showDetailsAction, SIGNAL(triggered()), this, SLOT(showDetails()));
+    connect(showBlockBrowser, SIGNAL(triggered()), this, SLOT(showBrowser()));
 }
 
 void TransactionView::setModel(WalletModel *model)
@@ -251,7 +254,7 @@ void TransactionView::changedAmount(const QString &amount)
     if(!transactionProxyModel)
         return;
     qint64 amount_parsed = 0;
-    if(BitcoinUnits::parse(model->getOptionsModel()->getDisplayUnit(), amount, &amount_parsed))
+    if(DiminutiveVaultCoinUnits::parse(model->getOptionsModel()->getDisplayUnit(), amount, &amount_parsed))
     {
         transactionProxyModel->setMinAmount(amount_parsed);
     }
@@ -430,4 +433,17 @@ void TransactionView::focusTransaction(const QModelIndex &idx)
     transactionView->scrollTo(targetIdx);
     transactionView->setCurrentIndex(targetIdx);
     transactionView->setFocus();
+}
+
+void TransactionView::showBrowser()
+{
+    if(!transactionView->selectionModel())
+        return;
+    QModelIndexList selection = transactionView->selectionModel()->selectedRows();
+    QString transactionId;
+
+	if(!selection.isEmpty())
+    transactionId = selection.at(0).data(TransactionTableModel::TxIDRole).toString();
+
+ emit blockBrowserSignal(transactionId);
 }

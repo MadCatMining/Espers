@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Espers - Debug window</string>
+   <string>DiminutiveVaultCoin - Debug window</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
@@ -36,7 +36,7 @@
           </font>
          </property>
          <property name="text">
-          <string>Espers Core</string>
+          <string>DiminutiveVaultCoin Core</string>
          </property>
         </widget>
        </item>
@@ -296,13 +296,36 @@
          </property>
         </widget>
        </item>
+       <item row="13" column="1">
+        <widget class="QLabel" name="labelConfigFile">
+         <property name="text">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Open Configuration File&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+        </widget>
+       </item>
        <item row="14" column="0">
         <widget class="QPushButton" name="openDebugLogfileButton">
          <property name="toolTip">
-          <string>Open the Espers debug log file from the current data directory. This can take a few seconds for large log files.</string>
+          <string>Open the DiminutiveVaultCoin debug log file from the current data directory. This can take a few seconds for large log files.</string>
          </property>
          <property name="text">
           <string>&amp;Open</string>
+         </property>
+         <property name="autoDefault">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="14" column="1">
+        <widget class="QPushButton" name="openConfigurationfileButton">
+         <property name="toolTip">
+          <string>Open the DiminutiveVaultCoin configuration file from the current data directory.</string>
+         </property>
+         <property name="styleSheet">
+          <string notr="true"/>
+         </property>
+         <property name="text">
+          <string>O&amp;pen</string>
          </property>
          <property name="autoDefault">
           <bool>false</bool>
@@ -325,7 +348,7 @@
        <item row="16" column="0">
         <widget class="QPushButton" name="showCLOptionsButton">
          <property name="toolTip">
-          <string>Show the Espers-Qt help message to get a list with possible Espers command-line options.</string>
+          <string>Show the DiminutiveVaultCoin-Qt help message to get a list with possible DiminutiveVaultCoin command-line options.</string>
          </property>
          <property name="text">
           <string>&amp;Show</string>
@@ -407,7 +430,7 @@
             <string/>
            </property>
            <property name="icon">
-            <iconset resource="../bitcoin.qrc">
+            <iconset resource="../diminutivevaultcoin.qrc">
              <normaloff>:/icons/remove</normaloff>:/icons/remove</iconset>
            </property>
            <property name="shortcut">
@@ -688,7 +711,7 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../bitcoin.qrc"/>
+  <include location="../diminutivevaultcoin.qrc"/>
  </resources>
  <connections/>
 </ui>

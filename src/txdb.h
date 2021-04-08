@@ -3,9 +3,9 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef ESPERS_TXDB_H
-#define ESPERS_TXDB_H
+#ifndef DIMINUTIVEVAULT_TXDB_H
+#define DIMINUTIVEVAULT_TXDB_H
 
 #include "txdb-leveldb.h"
 
-#endif  // ESPERS_TXDB_H
+#endif  // DIMINUTIVEVAULT_TXDB_H

@@ -11,7 +11,6 @@
 #include "sync.h"
 #include "base58.h"
 #include "db.h"
-#include "rpcvelocity.h"
 #include "ui_interface.h"
 #ifdef ENABLE_WALLET
 #include "wallet.h"
@@ -83,10 +82,12 @@ void RPCTypeCheck(const Object& o,
     }
 }
 
-int64_t AmountFromValue(const Value& value)
+int64_t AmountFromValue(const Value& value, bool allowZero)
 {
     double dAmount = value.get_real();
-    if (dAmount <= 0.0 || dAmount > MAX_SINGLE_TX)
+    if (dAmount < 0.0 || dAmount > MAX_MONEY)
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount");
+    if (dAmount == 0 && !allowZero)
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount");
     int64_t nAmount = roundint64(dAmount * COIN);
     if (!MoneyRange(nAmount))
@@ -203,10 +204,10 @@ Value stop(const Array& params, bool fHelp)
     if (fHelp || params.size() > 1)
         throw runtime_error(
             "stop\n"
-            "Stop Espers server.");
+            "Stop DiminutiveVaultCoin server.");
     // Shutdown will take long enough that the response should get back
     StartShutdown();
-    return "Espers server stopping";
+    return "DiminutiveVaultCoin server stopping";
 }
 
 
@@ -231,7 +232,6 @@ static const CRPCCommand vRPCCommands[] =
     { "getnettotals",           &getnettotals,           true,      true,      false },
     { "getdifficulty",          &getdifficulty,          true,      false,     false },
     { "getinfo",                &getinfo,                true,      false,     false },
-    { "getvelocityinfo",        &getvelocityinfo,        true,      false,     false },
     { "getrawmempool",          &getrawmempool,          true,      false,     false },
     { "getblock",               &getblock,               false,     false,     false },
     { "getblockbynumber",       &getblockbynumber,       false,     false,     false },
@@ -243,7 +243,6 @@ static const CRPCCommand vRPCCommands[] =
     { "signrawtransaction",     &signrawtransaction,     false,     false,     false },
     { "sendrawtransaction",     &sendrawtransaction,     false,     false,     false },
     { "getcheckpoint",          &getcheckpoint,          true,      false,     false },
-    { "sendalert",              &sendalert,              false,     false,     false },
     { "validateaddress",        &validateaddress,        true,      false,     false },
     { "validatepubkey",         &validatepubkey,         true,      false,     false },
     { "verifymessage",          &verifymessage,          false,     false,     false },
@@ -258,6 +257,7 @@ static const CRPCCommand vRPCCommands[] =
     { "getaccount",             &getaccount,             false,     false,     true },
     { "getaddressesbyaccount",  &getaddressesbyaccount,  true,      false,     true },
     { "sendtoaddress",          &sendtoaddress,          false,     false,     true },
+    { "burn",                   &burn,                   false,     false,     true },
     { "getreceivedbyaddress",   &getreceivedbyaddress,   false,     false,     true },
     { "getreceivedbyaccount",   &getreceivedbyaccount,   false,     false,     true },
     { "listreceivedbyaddress",  &listreceivedbyaddress,  false,     false,     true },
@@ -416,8 +416,8 @@ private:
 void ServiceConnection(AcceptedConnection *conn);
 
 // Forward declaration required for RPCListen
-template <typename Protocol>
-static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol> > acceptor,
+template <typename Protocol, typename SocketAcceptorService>
+static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor,
                              ssl::context& context,
                              bool fUseSSL,
                              AcceptedConnection* conn,
@@ -426,8 +426,8 @@ static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol> 
 /**
  * Sets up I/O resources to accept and handle a new connection.
  */
-template <typename Protocol>
-static void RPCListen(boost::shared_ptr< basic_socket_acceptor<Protocol> > acceptor,
+template <typename Protocol, typename SocketAcceptorService>
+static void RPCListen(boost::shared_ptr< basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor,
                    ssl::context& context,
                    const bool fUseSSL)
 {
@@ -437,7 +437,7 @@ static void RPCListen(boost::shared_ptr< basic_socket_acceptor<Protocol> > accep
     acceptor->async_accept(
             conn->sslStream.lowest_layer(),
             conn->peer,
-            boost::bind(&RPCAcceptHandler<Protocol>,
+            boost::bind(&RPCAcceptHandler<Protocol, SocketAcceptorService>,
                 acceptor,
                 boost::ref(context),
                 fUseSSL,
@@ -449,8 +449,8 @@ static void RPCListen(boost::shared_ptr< basic_socket_acceptor<Protocol> > accep
 /**
  * Accept and handle incoming connection.
  */
-template <typename Protocol>
-static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol> > acceptor,
+template <typename Protocol, typename SocketAcceptorService>
+static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor,
                              ssl::context& context,
                              const bool fUseSSL,
                              AcceptedConnection* conn,
@@ -487,39 +487,25 @@ static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol> 
 
 void StartRPCThreads()
 {
-    strRPCUserColonPass = mapArgs["-rpcuser"] + ":" + mapArgs["-rpcpassword"];
-    if (((mapArgs["-rpcpassword"] == "") ||
-         (mapArgs["-rpcuser"] == mapArgs["-rpcpassword"])) && Params().RequireRPCPassword())
+
+    if (mapArgs["-rpcpassword"] == "")
+
     {
-        unsigned char rand_pwd[32];
-        RAND_bytes(rand_pwd, 32);
-        string strWhatAmI = "To use Espersd";
-        if (mapArgs.count("-server"))
-            strWhatAmI = strprintf(_("To use the %s option"), "\"-server\"");
-        else if (mapArgs.count("-daemon"))
-            strWhatAmI = strprintf(_("To use the %s option"), "\"-daemon\"");
-        uiInterface.ThreadSafeMessageBox(strprintf(
-            _("%s, you must set a rpcpassword in the configuration file:\n"
-              "%s\n"
-              "It is recommended you use the following random password:\n"
-              "rpcuser=Espersrpc\n"
-              "rpcpassword=%s\n"
-              "(you do not need to remember this password)\n"
-              "The username and password MUST NOT be the same.\n"
-              "If the file does not exist, create it with owner-readable-only file permissions.\n"
-              "It is also recommended to set alertnotify so you are notified of problems;\n"
-              "for example: alertnotify=echo %%s | mail -s \"Espers Alert\" admin@foo.com\n"),
-                strWhatAmI,
-                GetConfigFile().string(),
-                EncodeBase58(&rand_pwd[0],&rand_pwd[0]+32)),
+      LogPrintf("No rpcpassword set - using random password cookie as authentication\n");
+        if (!GenerateAuthCookie(&strRPCUserColonPass)) {
+            uiInterface.ThreadSafeMessageBox(
+                _("Error: A fatal internal error occured, see debug.log for details"), // Same message as AbortNode
                 "", CClientUIInterface::MSG_ERROR);
-        StartShutdown();
-        return;
+            StartShutdown();
+            return;
+        }
+    } else {
+        strRPCUserColonPass = mapArgs["-rpcuser"] + ":" + mapArgs["-rpcpassword"];
     }
 
     assert(rpc_io_service == NULL);
     rpc_io_service = new asio::io_service();
-    rpc_ssl_context = new ssl::context(ssl::context::sslv23);
+    rpc_ssl_context = new ssl::context(*rpc_io_service, ssl::context::sslv23);
 
     const bool fUseSSL = GetBoolArg("-rpcssl", false);
 
@@ -538,7 +524,7 @@ void StartRPCThreads()
         else LogPrintf("ThreadRPCServer ERROR: missing server private key file %s\n", pathPKFile.string());
 
         string strCiphers = GetArg("-rpcsslciphers", "TLSv1.2+HIGH:TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!3DES:@STRENGTH");
-        SSL_CTX_set_cipher_list(rpc_ssl_context->native_handle(), strCiphers.c_str());
+        SSL_CTX_set_cipher_list(rpc_ssl_context->impl(), strCiphers.c_str());
     }
 
     // Try a dual IPv6/IPv4 socket, falling back to separate IPv4 and IPv6 sockets
@@ -609,6 +595,7 @@ void StopRPCThreads()
     if (rpc_io_service == NULL) return;
 
     deadlineTimers.clear();
+    DeleteAuthCookie();
     rpc_io_service->stop();
     if (rpc_worker_group != NULL)
         rpc_worker_group->join_all();

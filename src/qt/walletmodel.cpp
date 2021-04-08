@@ -136,7 +136,7 @@ void WalletModel::updateAddressBook(const QString &address, const QString &label
 
 bool WalletModel::validateAddress(const QString &address)
 {
-    CBitcoinAddress addressParsed(address.toStdString());
+    CDiminutiveVaultCoinAddress addressParsed(address.toStdString());
     return addressParsed.IsValid();
 }
 
@@ -192,7 +192,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         foreach(const SendCoinsRecipient &rcp, recipients)
         {
             CScript scriptPubKey;
-            scriptPubKey.SetDestination(CBitcoinAddress(rcp.address.toStdString()).Get());
+            scriptPubKey.SetDestination(CDiminutiveVaultCoinAddress(rcp.address.toStdString()).Get());
             vecSend.push_back(make_pair(scriptPubKey, rcp.amount));
         }
 
@@ -224,7 +224,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
     foreach(const SendCoinsRecipient &rcp, recipients)
     {
         std::string strAddress = rcp.address.toStdString();
-        CTxDestination dest = CBitcoinAddress(strAddress).Get();
+        CTxDestination dest = CDiminutiveVaultCoinAddress(strAddress).Get();
         std::string strLabel = rcp.label.toStdString();
         {
             LOCK(wallet->cs_wallet);
@@ -327,7 +327,7 @@ static void NotifyKeyStoreStatusChanged(WalletModel *walletmodel, CCryptoKeyStor
 
 static void NotifyAddressBookChanged(WalletModel *walletmodel, CWallet *wallet, const CTxDestination &address, const std::string &label, bool isMine, ChangeType status)
 {
-    QString strAddress = QString::fromStdString(CBitcoinAddress(address).ToString());
+    QString strAddress = QString::fromStdString(CDiminutiveVaultCoinAddress(address).ToString());
     QString strLabel = QString::fromStdString(label);
 
     qDebug() << "NotifyAddressBookChanged : " + strAddress + " " + strLabel + " isMine=" + QString::number(isMine) + " status=" + QString::number(status);
@@ -458,7 +458,7 @@ void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins) 
 
         CTxDestination address;
         if(!ExtractDestination(cout.tx->vout[cout.i].scriptPubKey, address)) continue;
-        mapCoins[CBitcoinAddress(address).ToString().c_str()].push_back(out);
+        mapCoins[CDiminutiveVaultCoinAddress(address).ToString().c_str()].push_back(out);
     }
 }
 

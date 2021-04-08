@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2014 The Bitcoin developers
+// Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -27,9 +27,15 @@
 using namespace std;
 using namespace boost;
 
-static const int MAX_OUTBOUND_CONNECTIONS = DEFAULT_MAX_OUTBOUND_CONNECTIONS;
+static const int MAX_OUTBOUND_CONNECTIONS = 16;
 
 bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOutbound = NULL, const char *strDest = NULL, bool fOneShot = false);
+
+
+struct LocalServiceInfo {
+    int nScore;
+    int nPort;
+};
 
 //
 // Global state variables
@@ -45,14 +51,13 @@ static CNode* pnodeSync = NULL;
 uint64_t nLocalHostNonce = 0;
 static std::vector<SOCKET> vhListenSocket;
 CAddrMan addrman;
-int nMaxConnections = 125;
 
 vector<CNode*> vNodes;
 CCriticalSection cs_vNodes;
 map<CInv, CDataStream> mapRelay;
 deque<pair<int64_t, CInv> > vRelayExpiration;
 CCriticalSection cs_mapRelay;
-limitedmap<CInv, int64_t> mapAlreadyAskedFor(MAX_INV_SZ);
+map<CInv, int64_t> mapAlreadyAskedFor;
 
 static deque<string> vOneShots;
 CCriticalSection cs_vOneShots;
@@ -62,9 +67,6 @@ CCriticalSection cs_setservAddNodeAddresses;
 
 vector<std::string> vAddedNodes;
 CCriticalSection cs_vAddedNodes;
-
-NodeId nLastNodeId = 0;
-CCriticalSection cs_nLastNodeId;
 
 static CSemaphore *semOutbound = NULL;
 
@@ -190,21 +192,23 @@ bool IsPeerAddrLocalGood(CNode *pnode)
            !IsLimited(pnode->addrLocal.GetNetwork());
 }
 
-// used when scores of local addresses may have changed
-// pushes better local address to peers
-void static AdvertizeLocal()
+// pushes our own address to a peer
+void AdvertizeLocal(CNode *pnode)
 {
-    LOCK(cs_vNodes);
-    BOOST_FOREACH(CNode* pnode, vNodes)
+    if (!fNoListen && pnode->fSuccessfullyConnected)
     {
-        if (pnode->fSuccessfullyConnected)
+        CAddress addrLocal = GetLocalAddress(&pnode->addr);
+        // If discovery is enabled, sometimes give our peer the address it
+        // tells us that it sees us as in case it has a better idea of our
+        // address than we do.
+        if (IsPeerAddrLocalGood(pnode) && (!addrLocal.IsRoutable() ||
+             GetRand((GetnScore(addrLocal) > LOCAL_MANUAL) ? 8:2) == 0))
         {
-            CAddress addrLocal = GetLocalAddress(&pnode->addr);
-            if (addrLocal.IsRoutable() && (CService)addrLocal != (CService)pnode->addrLocal)
-            {
-                pnode->PushAddress(addrLocal);
-                pnode->addrLocal = addrLocal;
-            }
+            addrLocal.SetIP(pnode->addrLocal);
+        }
+        if (addrLocal.IsRoutable())
+        {
+            pnode->PushAddress(addrLocal);
         }
     }
 }
@@ -241,8 +245,6 @@ bool AddLocal(const CService& addr, int nScore)
         }
         SetReachable(addr.GetNetwork());
     }
-
-    AdvertizeLocal();
 
     return true;
 }
@@ -281,9 +283,6 @@ bool SeenLocal(const CService& addr)
             return false;
         mapLocalHost[addr].nScore++;
     }
-
-    AdvertizeLocal();
-
     return true;
 }
 
@@ -466,31 +465,46 @@ bool CNode::IsBanned(CNetAddr ip)
     return fResult;
 }
 
-bool CNode::Ban(const CNetAddr &addr) {
-    int64_t banTime = GetTime()+GetArg("-bantime", 60*60*24);  // Default 24-hour ban
+bool CNode::Misbehaving(int howmuch)
+{
+    if (addr.IsLocal())
     {
-        LOCK(cs_setBanned);
-        if (setBanned[addr] < banTime)
-            setBanned[addr] = banTime;
+        LogPrintf("Warning: Local node %s misbehaving (delta: %d)!\n", addrName, howmuch);
+        return false;
     }
-    return true;
+
+    nMisbehavior += howmuch;
+    if (nMisbehavior >= GetArg("-banscore", 100))
+    {
+        int64_t banTime = GetTime()+GetArg("-bantime", 60*60*24);  // Default 24-hour ban
+        LogPrintf("Misbehaving: %s (%d -> %d) DISCONNECTING\n", addr.ToString(), nMisbehavior-howmuch, nMisbehavior);
+        {
+            LOCK(cs_setBanned);
+            if (setBanned[addr] < banTime)
+                setBanned[addr] = banTime;
+        }
+        CloseSocketDisconnect();
+        return true;
+    } else
+        LogPrintf("Misbehaving: %s (%d -> %d)\n", addr.ToString(), nMisbehavior-howmuch, nMisbehavior);
+    return false;
 }
 
 #undef X
 #define X(name) stats.name = name
 void CNode::copyStats(CNodeStats &stats)
 {
-    stats.nodeid = this->GetId();
     X(nServices);
     X(nLastSend);
     X(nLastRecv);
     X(nTimeConnected);
+    X(nTimeOffset);
     X(addrName);
     X(nVersion);
-    X(cleanSubVer);
     X(strSubVer);
     X(fInbound);
     X(nStartingHeight);
+    X(nMisbehavior);
     X(nSendBytes);
     X(nRecvBytes);
     stats.fSyncNode = (this == pnodeSync);
@@ -506,10 +520,10 @@ void CNode::copyStats(CNodeStats &stats)
         nPingUsecWait = GetTimeMicros() - nPingUsecStart;
     }
 
-    // Raw ping time is in microseconds, but show it to user as whole seconds (Bitcoin users should be well used to small numbers with many decimal places by now :)
+    // Raw ping time is in microseconds, but show it to user as whole seconds (DiminutiveVaultCoin users should be well used to small numbers with many decimal places by now :)
     stats.dPingTime = (((double)nPingUsecTime) / 1e6);
     stats.dPingWait = (((double)nPingUsecWait) / 1e6);
-    
+
     // Leave string empty if addrLocal invalid (not filled in yet)
     stats.addrLocal = addrLocal.IsValid() ? addrLocal.ToString() : "";
 }
@@ -593,14 +607,6 @@ int CNetMessage::readData(const char *pch, unsigned int nBytes)
 
     return nCopy;
 }
-
-
-
-
-
-
-
-
 
 // requires LOCK(cs_vSend)
 void SocketSendData(CNode *pnode)
@@ -967,7 +973,7 @@ void ThreadMapPort()
     int error = 0;
     devlist = upnpDiscover(2000, multicastif, minissdpdpath, 0, 0, &error);
 #else
-    /* miniupnpc 1.9 */
+    /* miniupnpc 1.9.20150730 */
     int error = 0;
     devlist = upnpDiscover(2000, multicastif, minissdpdpath, 0, 0, 2, &error);
 #endif
@@ -996,7 +1002,7 @@ void ThreadMapPort()
             }
         }
 
-        string strDesc = "Espers " + FormatFullVersion();
+        string strDesc = "DiminutiveVaultCoin " + FormatFullVersion();
 
         try {
           while (true) {
@@ -1468,18 +1474,6 @@ bool BindListenPort(const CService &addrBind, string& strError)
     strError = "";
     int nOne = 1;
 
-#ifdef WIN32
-    // Initialize Windows Sockets
-    WSADATA wsadata;
-    int ret = WSAStartup(MAKEWORD(2,2), &wsadata);
-    if (ret != NO_ERROR)
-    {
-        strError = strprintf("Error: TCP/IP socket library failed to start (WSAStartup returned error %d)", ret);
-        LogPrintf("%s\n", strError);
-        return false;
-    }
-#endif
-
     // Create socket for listening for incoming connections
     struct sockaddr_storage sockaddr;
     socklen_t len = sizeof(sockaddr);
@@ -1544,7 +1538,7 @@ bool BindListenPort(const CService &addrBind, string& strError)
     {
         int nErr = WSAGetLastError();
         if (nErr == WSAEADDRINUSE)
-            strError = strprintf(_("Unable to bind to %s on this computer. Espers is probably already running."), addrBind.ToString());
+            strError = strprintf(_("Unable to bind to %s on this computer. DiminutiveVaultCoin is probably already running."), addrBind.ToString());
         else
             strError = strprintf(_("Unable to bind to %s on this computer (bind returned error %d, %s)"), addrBind.ToString(), nErr, strerror(nErr));
         LogPrintf("%s\n", strError);
@@ -1725,21 +1719,6 @@ void RelayTransaction(const CTransaction& tx, const uint256& hash, const CDataSt
     }
 
     RelayInventory(inv);
-}
-
-void RelayTransactionLockReq(const CTransaction& tx, bool relayToAll)
-{
-
-    //broadcast the new lock
-    LOCK(cs_vNodes);
-    BOOST_FOREACH(CNode* pnode, vNodes)
-    {
-        if(!relayToAll && !pnode->fRelayTxes)
-            continue;
-
-        pnode->PushMessage("txlreq", tx);
-    }
-
 }
 
 void CNode::RecordBytesRecv(uint64_t bytes)

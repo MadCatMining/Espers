@@ -5,22 +5,26 @@
 USE_UPNP:=0
 USE_WALLET:=1
 
-INCLUDEPATHS= \
- -I"C:\boost-1.50.0-mgw" \
- -I"C:\db-4.8.30.NC-mgw\build_unix" \
- -I"C:\openssl-1.0.1c-mgw\include"
+BOOST_SUFFIX?=-mgw49-mt-s-1_52
 
+INCLUDEPATHS= \
+ -I"$(CURDIR)" \
+ -I"/c/deps/boost_1_52_0" \
+ -I"/c/deps/db-4.8.30.NC/build_unix" \
+ -I"/c/deps/openssl-1.0.1j/include"
+ 
 LIBPATHS= \
- -L"C:\boost-1.50.0-mgw\stage\lib" \
- -L"C:\db-4.8.30.NC-mgw\build_unix" \
- -L"C:\openssl-1.0.1c-mgw"
+ -L"$(CURDIR)/leveldb" \
+ -L"/c/deps/boost_1_52_0/stage/lib" \
+ -L"/c/deps/db-4.8.30.NC/build_unix" \
+ -L"/c/deps/openssl-1.0.1j"
 
 LIBS= \
- -l boost_system-mgw44-mt-1_53 \
- -l boost_filesystem-mgw44-mt-1_53 \
- -l boost_program_options-mgw44-mt-1_53 \
- -l boost_thread-mgw44-mt-1_53 \
- -l boost_chrono-mgw44-mt-1_53 \
+ -l boost_system-mgw49-mt-s-1_52 \
+ -l boost_filesystem-mgw49-mt-s-1_52 \
+ -l boost_program_options-mgw49-mt-s-1_52 \
+ -l boost_thread-mgw49-mt-s-1_52 \
+ -l boost_chrono-mgw49-mt-s-1_52 \
  -l db_cxx \
  -l ssl \
  -l crypto
@@ -28,7 +32,7 @@ LIBS= \
 DEFS=-DWIN32 -D_WINDOWS -DBOOST_THREAD_USE_LIB -DBOOST_SPIRIT_THREADSAFE
 DEBUGFLAGS=-g
 CFLAGS=-mthreads -O2 -msse2 -w -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter $(DEBUGFLAGS) $(DEFS) $(INCLUDEPATHS)
-LDFLAGS=-Wl,--dynamicbase -Wl,--nxcompat
+LDFLAGS=-Wl,--dynamicbase -Wl,--nxcompat -Wl,--large-address-aware -static
 
 TESTDEFS = -DTEST_DATA_DIR=$(abspath test/data)
 
@@ -48,8 +52,6 @@ LIBS += -l kernel32 -l user32 -l gdi32 -l comdlg32 -l winspool -l winmm -l shell
 HEADERS = $(wildcard *.h)
 
 OBJS= \
-    leveldb/libleveldb.a \
-    obj/alert.o \
     obj/version.o \
     obj/checkpoints.o \
     obj/netbase.o \
@@ -57,14 +59,12 @@ OBJS= \
     obj/crypter.o \
     obj/key.o \
     obj/init.o \
-    obj/bitcoind.o \
+    obj/diminutivevaultcoind.o \
     obj/keystore.o \
     obj/core.o \
     obj/main.o \
     obj/net.o \
     obj/protocol.o \
-    obj/velocity.o \
-    obj/rpcvelocity.o \
     obj/rpcclient.o \
     obj/rpcprotocol.o \
     obj/rpcserver.o \
@@ -76,36 +76,33 @@ OBJS= \
     obj/script.o \
     obj/sync.o \
     obj/txmempool.o \
-    obj/blocksizecalculator.o \
     obj/util.o \
     obj/hash.o \
     obj/noui.o \
     obj/kernel.o \
     obj/pbkdf2.o \
     obj/scrypt.o \
-    obj/scrypt-arm.o \
     obj/scrypt-x86.o \
     obj/scrypt-x86_64.o \
-    obj/blockparams.o \
     obj/chainparams.o \
-    obj/hmq1725/blake.o\
-    obj/hmq1725/bmw.o\
-    obj/hmq1725/groestl.o\
-    obj/hmq1725/jh.o\
-    obj/hmq1725/keccak.o\
-    obj/hmq1725/skein.o\
-    obj/hmq1725/cubehash.o \
-    obj/hmq1725/luffa.o \
-    obj/hmq1725/aes_helper.o \
-    obj/hmq1725/echo.o \
-    obj/hmq1725/shavite.o \
-    obj/hmq1725/simd.o \
-    obj/hmq1725/hamsi.o \
-    obj/hmq1725/fugue.o \
-    obj/hmq1725/shabal.o \
-    obj/hmq1725/whirlpool.o \
-    obj/hmq1725/haval.o \
-    obj/hmq1725/sha2big.o
+    obj/blake.o\
+    obj/bmw.o\
+    obj/groestl.o\
+    obj/jh.o\
+    obj/keccak.o\
+    obj/skein.o\
+    obj/cubehash.o \
+    obj/luffa.o \
+    obj/aes_helper.o \
+    obj/echo.o \
+    obj/shavite.o \
+    obj/simd.o \
+    obj/hamsi.o \
+    obj/fugue.o \
+    obj/shabal.o \
+    obj/whirlpool.o \
+    obj/haval.o \
+    obj/sha2big.o
 
 ifeq (${USE_WALLET}, 1)
     DEFS += -DENABLE_WALLET
@@ -119,7 +116,7 @@ ifeq (${USE_WALLET}, 1)
         obj/walletdb.o
 endif
 
-all: Espersd.exe
+all: diminutivevaultcoind.exe
 
 LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
@@ -138,11 +135,11 @@ obj/scrypt-x86.o: scrypt-x86.S
 obj/scrypt-x86_64.o: scrypt-x86_64.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
-Espersd.exe: $(OBJS:obj/%=obj/%)
+diminutivevaultcoind.exe: $(OBJS:obj/%=obj/%)
 	g++ $(CFLAGS) $(LDFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
 
 clean:
-	-del /Q Espersd
-	-del /Q obj/*
+	-del /Q diminutivevaultcoind
+	-del /Q obj\*
 
 FORCE:

@@ -3,8 +3,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef ESPERS_CHAIN_PARAMS_H
-#define ESPERS_CHAIN_PARAMS_H
+#ifndef DIMINUTIVEVAULT_CHAIN_PARAMS_H
+#define DIMINUTIVEVAULT_CHAIN_PARAMS_H
 
 #include "bignum.h"
 #include "uint256.h"
@@ -27,7 +27,7 @@ struct CDNSSeedData {
 
 /**
  * CChainParams defines various tweakable parameters of a given instance of the
- * Bitcoin system. There are three: the main network on which people trade goods
+ * DiminutiveVaultCoin system. There are three: the main network on which people trade goods
  * and services, the public test network which gets reset from time to time and
  * a regression test mode which is intended for private networks only. It has
  * minimal difficulty to ensure that blocks can be found instantly.
@@ -38,7 +38,6 @@ public:
     enum Network {
         MAIN,
         TESTNET,
-        REGTEST,
 
         MAX_NETWORK_TYPES
     };
@@ -55,10 +54,9 @@ public:
 
     const uint256& HashGenesisBlock() const { return hashGenesisBlock; }
     const MessageStartChars& MessageStart() const { return pchMessageStart; }
-    const vector<unsigned char>& AlertKey() const { return vAlertPubKey; }
     int GetDefaultPort() const { return nDefaultPort; }
+
     const CBigNum& ProofOfWorkLimit() const { return bnProofOfWorkLimit; }
-    const CBigNum& ProofOfStakeLimit() const { return bnProofOfStakeLimit; }
     int SubsidyHalvingInterval() const { return nSubsidyHalvingInterval; }
     virtual const CBlock& GenesisBlock() const = 0;
     virtual bool RequireRPCPassword() const { return true; }
@@ -68,29 +66,20 @@ public:
     const std::vector<unsigned char> &Base58Prefix(Base58Type type) const { return base58Prefixes[type]; }
     virtual const vector<CAddress>& FixedSeeds() const = 0;
     int RPCPort() const { return nRPCPort; }
-    int64_t TargetSpacing() const { return nTargetSpacing; }
-    int64_t TargetTimespan() const { return nTargetTimespan; }
-    int64_t AdjustmentInterval() const { return nAdjustmentInterval; }
-    int StartPoSBlock() const { return nStartPoSBlock; }
+    int LastPOWBlock() const { return nLastPOWBlock; }
 protected:
     CChainParams() {};
 
     uint256 hashGenesisBlock;
     MessageStartChars pchMessageStart;
-    // Raw pub key bytes for the broadcast alert signing key.
-    vector<unsigned char> vAlertPubKey;
     int nDefaultPort;
     int nRPCPort;
     CBigNum bnProofOfWorkLimit;
-    CBigNum bnProofOfStakeLimit;
     int nSubsidyHalvingInterval;
     string strDataDir;
     vector<CDNSSeedData> vSeeds;
     std::vector<unsigned char> base58Prefixes[MAX_BASE58_TYPES];
-    int64_t nTargetSpacing;
-    int64_t nTargetTimespan;
-    int64_t nAdjustmentInterval;
-    int nStartPoSBlock;
+    int nLastPOWBlock;
 };
 
 /**

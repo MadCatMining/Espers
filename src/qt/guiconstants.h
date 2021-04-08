@@ -7,16 +7,18 @@ static const int MODEL_UPDATE_DELAY = 250;
 /* AskPassphraseDialog -- Maximum passphrase length */
 static const int MAX_PASSPHRASE_SIZE = 1024;
 
-/* BitcoinGUI -- Size of icons in status bar */
-static const int STATUSBAR_ICONSIZE = 32;
+/* DiminutiveVaultCoinGUI -- Size of icons in status bar */
+static const int STATUSBAR_ICONSIZE = 16;
 
 /* Invalid field background style */
 #define STYLE_INVALID "background:#FF8080"
 
 /* Transaction list -- unconfirmed transaction */
 #define COLOR_UNCONFIRMED QColor(128, 128, 128)
+/* Transaction list -- positive amount */
+#define COLOR_POSITIVE QColor("green")
 /* Transaction list -- negative amount */
-#define COLOR_NEGATIVE QColor(255, 0, 0)
+#define COLOR_NEGATIVE QColor("red")
 /* Transaction list -- bare address (without label) */
 #define COLOR_BAREADDRESS QColor(140, 140, 140)
 

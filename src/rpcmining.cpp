@@ -3,7 +3,6 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "blockparams.h"
 #include "rpcserver.h"
 #include "chainparams.h"
 #include "main.h"
@@ -47,10 +46,7 @@ Value getsubsidy(const Array& params, bool fHelp)
             "getsubsidy [nTarget]\n"
             "Returns proof-of-work subsidy value for the specified value of target.");
 
-    if (!pindexBest)
-        return (uint64_t)0;
-    else
-        return (uint64_t)GetProofOfWorkReward(pindexBest->nHeight, 0);
+    return (uint64_t)GetProofOfWorkReward(0, pindexBest->nHeight);
 }
 
 Value getstakesubsidy(const Array& params, bool fHelp)
@@ -77,7 +73,7 @@ Value getstakesubsidy(const Array& params, bool fHelp)
     if (!tx.GetCoinAge(txdb, pindexBest, nCoinAge))
         throw JSONRPCError(RPC_MISC_ERROR, "GetCoinAge failed");
 
-    return (uint64_t)GetProofOfStakeReward(nCoinAge, 0);
+    return (uint64_t)GetProofOfStakeReward(nCoinAge, 0, pindexBest->nHeight + 1);
 }
 
 Value getmininginfo(const Array& params, bool fHelp)
@@ -91,10 +87,6 @@ Value getmininginfo(const Array& params, bool fHelp)
     if (pwalletMain)
         nWeight = pwalletMain->GetStakeWeight();
 
-    // Define block rewards
-    int64_t nRewardPoW = (uint64_t)GetProofOfWorkReward(nBestHeight, 0);
-    int64_t nRewardPoS = (uint64_t)GetProofOfStakeReward(nBestHeight, 0);
-
     Object obj, diff, weight;
     obj.push_back(Pair("blocks",        (int)nBestHeight));
     obj.push_back(Pair("currentblocksize",(uint64_t)nLastBlockSize));
@@ -105,8 +97,7 @@ Value getmininginfo(const Array& params, bool fHelp)
     diff.push_back(Pair("search-interval",      (int)nLastCoinStakeSearchInterval));
     obj.push_back(Pair("difficulty",    diff));
 
-    obj.push_back(Pair("blockvalue-PoS",    nRewardPoS));
-    obj.push_back(Pair("blockvalue-PoW",    nRewardPoW));//obj.push_back(Pair("blockvalue",    (uint64_t)GetProofOfWorkReward(nBestHeight, 0)));
+    obj.push_back(Pair("blockvalue",    (uint64_t)GetProofOfWorkReward(0, pindexBest->nHeight)));
     obj.push_back(Pair("netmhashps",     GetPoWMHashPS()));
     obj.push_back(Pair("netstakeweight", GetPoSKernelPS()));
     obj.push_back(Pair("errors",        GetWarnings("statusbar")));
@@ -117,7 +108,6 @@ Value getmininginfo(const Array& params, bool fHelp)
     weight.push_back(Pair("combined",  (uint64_t)nWeight));
     obj.push_back(Pair("stakeweight", weight));
 
-    obj.push_back(Pair("stakeinterest",    (uint64_t)COIN_YEAR_REWARD));
     obj.push_back(Pair("testnet",       TestNet()));
     return obj;
 }
@@ -135,7 +125,7 @@ Value getstakinginfo(const Array& params, bool fHelp)
 
     uint64_t nNetworkWeight = GetPoSKernelPS();
     bool staking = nLastCoinStakeSearchInterval && nWeight;
-    uint64_t nExpectedTime = staking ? (Params().TargetSpacing() * nNetworkWeight / nWeight) : 0;
+    uint64_t nExpectedTime = staking ? (GetTargetSpacing(nBestHeight) * nNetworkWeight / nWeight) : 0;
 
     Object obj;
 
@@ -172,10 +162,10 @@ Value checkkernel(const Array& params, bool fHelp)
     bool fCreateBlockTemplate = params.size() > 1 ? params[1].get_bool() : false;
 
     if (vNodes.empty())
-        throw JSONRPCError(-9, "Espers is not connected!");
+        throw JSONRPCError(-9, "DiminutiveVaultCoin is not connected!");
 
     if (IsInitialBlockDownload())
-        throw JSONRPCError(-10, "Espers is downloading blocks...");
+        throw JSONRPCError(-10, "DiminutiveVaultCoin is downloading blocks...");
 
     COutPoint kernel;
     CBlockIndex* pindexPrev = pindexBest;
@@ -225,7 +215,7 @@ Value checkkernel(const Array& params, bool fHelp)
         return result;
 
     int64_t nFees;
-    auto_ptr<CBlock> pblock(CreateNewBlock(*pMiningKey, true, &nFees));
+    std::unique_ptr<CBlock> pblock(CreateNewBlock(*pMiningKey, true, &nFees));
 
     pblock->nTime = pblock->vtx[0].nTime = nTime;
 
@@ -253,10 +243,13 @@ Value getworkex(const Array& params, bool fHelp)
         );
 
     if (vNodes.empty())
-        throw JSONRPCError(-9, "Espers is not connected!");
+        throw JSONRPCError(-9, "DiminutiveVaultCoin is not connected!");
 
     if (IsInitialBlockDownload())
-        throw JSONRPCError(-10, "Espers is downloading blocks...");
+        throw JSONRPCError(-10, "DiminutiveVaultCoin is downloading blocks...");
+
+    if (pindexBest->nHeight >= Params().LastPOWBlock())
+        throw JSONRPCError(RPC_MISC_ERROR, "No more PoW blocks");
 
     typedef map<uint256, pair<CBlock*, CScript> > mapNewBlock_t;
     static mapNewBlock_t mapNewBlock;
@@ -384,10 +377,13 @@ Value getwork(const Array& params, bool fHelp)
             "If [data] is specified, tries to solve the block and returns true if it was successful.");
 
     if (vNodes.empty())
-        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "Espers is not connected!");
+        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "DiminutiveVaultCoin is not connected!");
 
     if (IsInitialBlockDownload())
-        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Espers is downloading blocks...");
+        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "DiminutiveVaultCoin is downloading blocks...");
+
+    if (pindexBest->nHeight >= Params().LastPOWBlock())
+        throw JSONRPCError(RPC_MISC_ERROR, "No more PoW blocks");
 
     typedef map<uint256, pair<CBlock*, CScript> > mapNewBlock_t;
     static mapNewBlock_t mapNewBlock;    // FIXME: thread safety
@@ -525,10 +521,13 @@ Value getblocktemplate(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode");
 
     if (vNodes.empty())
-        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "Espers is not connected!");
+        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "DiminutiveVaultCoin is not connected!");
 
     if (IsInitialBlockDownload())
-        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Espers is downloading blocks...");
+        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "DiminutiveVaultCoin is downloading blocks...");
+
+    if (pindexBest->nHeight >= Params().LastPOWBlock())
+        throw JSONRPCError(RPC_MISC_ERROR, "No more PoW blocks");
 
     // Update block
     static unsigned int nTransactionsUpdatedLast;
@@ -656,6 +655,39 @@ Value submitblock(const Array& params, bool fHelp)
     }
     catch (std::exception &e) {
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
+    }
+
+    if (params.size() > 1)
+    {
+        const Object& oparam = params[1].get_obj();
+
+        const Value& coinstake_v = find_value(oparam, "coinstake");
+        if (coinstake_v.type() == str_type)
+        {
+            vector<unsigned char> txData(ParseHex(coinstake_v.get_str()));
+            CDataStream ssTx(txData, SER_NETWORK, PROTOCOL_VERSION);
+            CTransaction txCoinStake;
+            try {
+                ssTx >> txCoinStake;
+            }
+            catch (std::exception &e) {
+                throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Coinstake decode failed");
+            }
+
+            block.vtx.insert(block.vtx.begin() + 1, txCoinStake);
+            block.hashMerkleRoot = block.BuildMerkleTree();
+
+            CPubKey pubkey;
+            if (!pMiningKey->GetReservedKey(pubkey))
+                throw JSONRPCError(RPC_MISC_ERROR, "GetReservedKey failed");
+
+            CKey key;
+            if (!pwalletMain->GetKey(pubkey.GetID(), key))
+                throw JSONRPCError(RPC_MISC_ERROR, "GetKey failed");
+
+            if (!key.Sign(block.GetHash(), block.vchBlockSig))
+                throw JSONRPCError(RPC_MISC_ERROR, "Sign failed");
+        }
     }
 
     bool fAccepted = ProcessBlock(NULL, &block);

@@ -2,8 +2,8 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#ifndef ESPERS_NET_H
-#define ESPERS_NET_H
+#ifndef DIMINUTIVEVAULT_NET_H
+#define DIMINUTIVEVAULT_NET_H
 
 #include <deque>
 #include <boost/array.hpp>
@@ -21,7 +21,6 @@
 #include "protocol.h"
 #include "addrman.h"
 #include "hash.h"
-#include "limitedmap.h"
 
 class CNode;
 class CBlockIndex;
@@ -32,14 +31,6 @@ extern int nBestHeight;
 static const int PING_INTERVAL = 2 * 60;
 /** Time after which to disconnect, after waiting for a ping response (or inactivity). */
 static const int TIMEOUT_INTERVAL = 20 * 60;
-/** The maximum number of entries in an 'inv' protocol message */
-static const unsigned int MAX_INV_SZ = 50000;
-/** The maximum number of entries in mapAskFor */
-static const size_t MAPASKFOR_MAX_SZ = MAX_INV_SZ;
-/** The maximum number of entries in setAskFor (larger due to getdata latency)*/
-static const size_t SETASKFOR_MAX_SZ = 2 * MAX_INV_SZ;
-/** The maximum number of new addresses to accumulate before announcing. */
-static const unsigned int MAX_ADDR_TO_SEND = 1000;
 
 inline unsigned int ReceiveFloodSize() { return 1000*GetArg("-maxreceivebuffer", 5*1000); }
 inline unsigned int SendBufferSize() { return 1000*GetArg("-maxsendbuffer", 1*1000); }
@@ -58,21 +49,15 @@ void StartNode(boost::thread_group& threadGroup);
 bool StopNode();
 void SocketSendData(CNode *pnode);
 
-typedef int NodeId;
-
 // Signals for message handling
 struct CNodeSignals
 {
-    boost::signals2::signal<int ()> GetHeight;
     boost::signals2::signal<bool (CNode*)> ProcessMessages;
     boost::signals2::signal<bool (CNode*, bool)> SendMessages;
-    boost::signals2::signal<void (NodeId, const CNode*)> InitializeNode;
-    boost::signals2::signal<void (NodeId)> FinalizeNode;
 };
 
 CNodeSignals& GetNodeSignals();
 
-typedef int NodeId;
 
 enum
 {
@@ -86,6 +71,7 @@ enum
 };
 
 bool IsPeerAddrLocalGood(CNode *pnode);
+void AdvertizeLocal(CNode *pnode);
 void SetLimited(enum Network net, bool fLimited = true);
 bool IsLimited(enum Network net);
 bool IsLimited(const CNetAddr& addr);
@@ -109,42 +95,30 @@ extern bool fDiscover;
 extern uint64_t nLocalServices;
 extern uint64_t nLocalHostNonce;
 extern CAddrMan addrman;
-extern int nMaxConnections;
 
 extern std::vector<CNode*> vNodes;
 extern CCriticalSection cs_vNodes;
 extern std::map<CInv, CDataStream> mapRelay;
 extern std::deque<std::pair<int64_t, CInv> > vRelayExpiration;
 extern CCriticalSection cs_mapRelay;
-extern limitedmap<CInv, int64_t> mapAlreadyAskedFor;
+extern std::map<CInv, int64_t> mapAlreadyAskedFor;
 
 extern std::vector<std::string> vAddedNodes;
 extern CCriticalSection cs_vAddedNodes;
 
-extern NodeId nLastNodeId;
-extern CCriticalSection cs_nLastNodeId;
 
-extern NodeId nLastNodeId;
-extern CCriticalSection cs_nLastNodeId;
-struct LocalServiceInfo {
-    int nScore;
-    int nPort;
-};
 
-extern CCriticalSection cs_mapLocalHost;
-extern map<CNetAddr, LocalServiceInfo> mapLocalHost;
 
 class CNodeStats
 {
 public:
-    NodeId nodeid;
     uint64_t nServices;
     int64_t nLastSend;
     int64_t nLastRecv;
     int64_t nTimeConnected;
+    int64_t nTimeOffset;
     std::string addrName;
     int nVersion;
-    std::string cleanSubVer;
     std::string strSubVer;
     bool fInbound;
     int nStartingHeight;
@@ -225,38 +199,27 @@ public:
     int64_t nLastSend;
     int64_t nLastRecv;
     int64_t nTimeConnected;
+    int64_t nTimeOffset;
     CAddress addr;
     std::string addrName;
     CService addrLocal;
     int nVersion;
-    // strSubVer is whatever byte array we read from the wire. However, this field is intended
-    // to be printed out, displayed to humans in various forms and so on. So we sanitize it and
-    // store the sanitized version in cleanSubVer. The original should be used when dealing with
-    // the network or wire types and the cleaned string used when displayed or logged.
-    std::string strSubVer, cleanSubVer;
+    std::string strSubVer;
     bool fOneShot;
     bool fClient;
     bool fInbound;
     bool fNetworkNode;
     bool fSuccessfullyConnected;
     bool fDisconnect;
-    // We use fRelayTxes for two purposes -
-    // a) it allows us to not relay tx invs before receiving the peer's version message
-    // b) the peer may tell us in their version message that we should not relay tx invs
-    //    until they have initialized their bloom filter.
-    bool fRelayTxes;
     CSemaphoreGrant grantOutbound;
     int nRefCount;
-    NodeId id;
 protected:
 
     // Denial-of-service detection/prevention
     // Key is IP address, value is banned-until-time
     static std::map<CNetAddr, int64_t> setBanned;
     static CCriticalSection cs_setBanned;
-    //int nMisbehavior;
-
-    std::vector<std::string> vecRequestsFulfilled; //keep track of what client has asked for
+    int nMisbehavior;
 
 public:
     uint256 hashContinue;
@@ -270,13 +233,11 @@ public:
     mruset<CAddress> setAddrKnown;
     bool fGetAddr;
     std::set<uint256> setKnown;
-    uint256 hashCheckpointKnown; // ppcoin: known sent sync-checkpoint
 
     // inventory based relay
     mruset<CInv> setInventoryKnown;
     std::vector<CInv> vInventoryToSend;
     CCriticalSection cs_inventory;
-    std::set<uint256> setAskFor;
     std::multimap<int64_t, CInv> mapAskFor;
 
     // Ping time measurement:
@@ -299,6 +260,7 @@ public:
         nSendBytes = 0;
         nRecvBytes = 0;
         nTimeConnected = GetTime();
+        nTimeOffset = 0;
         addr = addrIn;
         addrName = addrNameIn == "" ? addr.ToStringIPPort() : addrNameIn;
         nVersion = 0;
@@ -318,25 +280,16 @@ public:
         nStartingHeight = -1;
         fStartSync = false;
         fGetAddr = false;
-        fRelayTxes = false; // TODO: reference this again
-        // nMisbehavior = 0;
-        hashCheckpointKnown = 0;
+        nMisbehavior = 0;
         setInventoryKnown.max_size(SendBufferSize() / 1000);
         nPingNonceSent = 0;
         nPingUsecStart = 0;
         nPingUsecTime = 0;
         fPingQueued = false;
 
-        {
-            LOCK(cs_nLastNodeId);
-            id = nLastNodeId++;
-        }
-
         // Be shy and don't send version until we hear
         if (hSocket != INVALID_SOCKET && !fInbound)
             PushVersion();
-
-        GetNodeSignals().InitializeNode(GetId(), this);
     }
 
     ~CNode()
@@ -346,7 +299,6 @@ public:
             closesocket(hSocket);
             hSocket = INVALID_SOCKET;
         }
-        GetNodeSignals().FinalizeNode(GetId());
     }
 
 private:
@@ -360,9 +312,7 @@ private:
     void operator=(const CNode&);
 
 public:
-    NodeId GetId() const {
-      return id;
-    }
+
 
     int GetRefCount()
     {
@@ -374,7 +324,7 @@ public:
     unsigned int GetTotalRecvSize()
     {
         unsigned int total = 0;
-        BOOST_FOREACH(const CNetMessage &msg, vRecvMsg) 
+        BOOST_FOREACH(const CNetMessage &msg, vRecvMsg)
             total += msg.vRecv.size() + 24;
         return total;
     }
@@ -436,21 +386,10 @@ public:
     }
 
     void AskFor(const CInv& inv)
-    { 
-        if (mapAskFor.size() > MAPASKFOR_MAX_SZ)
-            return;
-        // a peer may not have multiple non-responded queue positions for a single inv item
-        if (!setAskFor.insert(inv.hash).second)
-            return;
-
+    {
         // We're using mapAskFor as a priority queue,
         // the key is the earliest time the request can be sent
-        int64_t nRequestTime;
-        limitedmap<CInv, int64_t>::const_iterator it = mapAlreadyAskedFor.find(inv);
-        if (it != mapAlreadyAskedFor.end())
-            nRequestTime = it->second;
-        else
-            nRequestTime = 0;
+        int64_t& nRequestTime = mapAlreadyAskedFor[inv];
         LogPrint("net", "askfor %s   %d (%s)\n", inv.ToString(), nRequestTime, DateTimeStrFormat("%H:%M:%S", nRequestTime/1000000));
 
         // Make sure not to reuse time indexes to keep things in the same order
@@ -462,10 +401,6 @@ public:
 
         // Each retry is 2 minutes after the last
         nRequestTime = std::max(nRequestTime + 2 * 60 * 1000000, nNow);
-        if (it != mapAlreadyAskedFor.end())
-            mapAlreadyAskedFor.update(it, nRequestTime);
-        else
-            mapAlreadyAskedFor.insert(std::make_pair(inv, nRequestTime));
         mapAskFor.insert(std::make_pair(nRequestTime, inv));
     }
 
@@ -709,7 +644,7 @@ public:
     // new code.
     static void ClearBanned(); // needed for unit testing
     static bool IsBanned(CNetAddr ip);
-    static bool Ban(const CNetAddr &ip);
+    bool Misbehaving(int howmuch); // 1 == a little, 100 == a lot
     void copyStats(CNodeStats &stats);
 
     // Network stats

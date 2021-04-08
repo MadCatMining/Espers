@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>About Espers</string>
+   <string>About DiminutiveVaultCoin</string>
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout_2">
    <item>
@@ -23,10 +23,7 @@
       </sizepolicy>
      </property>
      <property name="pixmap">
-      <pixmap resource="../bitcoin.qrc">:/images/about</pixmap>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+      <pixmap resource="../diminutivevaultcoin.qrc">:/images/about</pixmap>
      </property>
     </widget>
    </item>
@@ -53,7 +50,7 @@
           <cursorShape>IBeamCursor</cursorShape>
          </property>
          <property name="text">
-          <string>&lt;b&gt;Espers&lt;/b&gt; version</string>
+          <string>&lt;b&gt;DiminutiveVaultCoin&lt;/b&gt; version</string>
          </property>
          <property name="textInteractionFlags">
           <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
@@ -66,7 +63,7 @@
           <cursorShape>IBeamCursor</cursorShape>
          </property>
          <property name="text">
-          <string notr="true">0.1.2</string>
+          <string notr="true">1.0.1.0</string>
          </property>
          <property name="textInteractionFlags">
           <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
@@ -94,10 +91,10 @@
         <cursorShape>IBeamCursor</cursorShape>
        </property>
        <property name="text">
-        <string>Copyright © 2009-2014 The Bitcoin developers
+        <string>Copyright © 2020 The Diminutivevault developers
+Copyright © 2009-2014 The Bitcoin developers
 Copyright © 2012-2014 The NovaCoin developers
-Copyright © 2015 The BlackCoin developers
-Copyright © 2016-2018 The Espers developers</string>
+Copyright © 2014 The Bitcoin developers</string>
        </property>
        <property name="textInteractionFlags">
         <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
@@ -156,7 +153,7 @@ This product includes software developed by the OpenSSL Project for use in the O
   </layout>
  </widget>
  <resources>
-  <include location="../bitcoin.qrc"/>
+  <include location="../diminutivevaultcoin.qrc"/>
  </resources>
  <connections>
   <connection>

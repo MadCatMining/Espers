@@ -6,12 +6,12 @@
 #include "init.h"
 #include "main.h"
 #include "chainparams.h"
+#include "script.h"
 #include "txdb.h"
 #include "rpcserver.h"
 #include "net.h"
 #include "util.h"
 #include "ui_interface.h"
-#include "checkpoints.h"
 #ifdef ENABLE_WALLET
 #include "wallet.h"
 #include "walletdb.h"
@@ -28,13 +28,6 @@
 #include <signal.h>
 #endif
 
-#ifdef Q_OS_WIN
-#include <QTextStream>
-#include <QFile>
-#include <QDir>
-#include <QTextStream>
-#include <QFileInfo>
-#endif
 
 using namespace std;
 using namespace boost;
@@ -44,12 +37,10 @@ CWallet* pwalletMain = NULL;
 #endif
 CClientUIInterface uiInterface;
 bool fConfChange;
-bool fMinimizeCoinAge;
 unsigned int nNodeLifespan;
 unsigned int nDerivationMethodIndex;
 unsigned int nMinerSleep;
 bool fUseFastIndex;
-enum Checkpoints::CPMode CheckpointsMode;
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -99,7 +90,7 @@ void Shutdown()
     TRY_LOCK(cs_Shutdown, lockShutdown);
     if (!lockShutdown) return;
 
-    RenameThread("Espers-shutoff");
+    RenameThread("diminutivevaultcoin-shutoff");
     mempool.AddTransactionsUpdated(1);
     StopRPCThreads();
 #ifdef ENABLE_WALLET
@@ -170,8 +161,8 @@ std::string HelpMessage()
 {
     string strUsage = _("Options:") + "\n";
     strUsage += "  -?                     " + _("This help message") + "\n";
-    strUsage += "  -conf=<file>           " + _("Specify configuration file (default: Espers.conf)") + "\n";
-    strUsage += "  -pid=<file>            " + _("Specify pid file (default: Espersd.pid)") + "\n";
+    strUsage += "  -conf=<file>           " + _("Specify configuration file (default: diminutivevaultcoin.conf)") + "\n";
+    strUsage += "  -pid=<file>            " + _("Specify pid file (default: diminutivevaultcoind.pid)") + "\n";
     strUsage += "  -datadir=<dir>         " + _("Specify data directory") + "\n";
     strUsage += "  -wallet=<dir>          " + _("Specify wallet file (within data directory)") + "\n";
     strUsage += "  -dbcache=<n>           " + _("Set database cache size in megabytes (default: 25)") + "\n";
@@ -180,7 +171,7 @@ std::string HelpMessage()
     strUsage += "  -proxy=<ip:port>       " + _("Connect through SOCKS5 proxy") + "\n";
     strUsage += "  -tor=<ip:port>         " + _("Use proxy to reach tor hidden services (default: same as -proxy)") + "\n";
     strUsage += "  -dns                   " + _("Allow DNS lookups for -addnode, -seednode and -connect") + "\n";
-    strUsage += "  -port=<port>           " + _("Listen for connections on <port> (default: 15714 or testnet: 25714)") + "\n";
+    strUsage += "  -port=<port>           " + _("Listen for connections on <port> (default: 16000 or testnet: 25798)") + "\n";
     strUsage += "  -maxconnections=<n>    " + _("Maintain at most <n> connections to peers (default: 125)") + "\n";
     strUsage += "  -addnode=<ip>          " + _("Add a node to connect to and attempt to keep the connection open") + "\n";
     strUsage += "  -connect=<ip>          " + _("Connect only to the specified node(s)") + "\n";
@@ -193,7 +184,6 @@ std::string HelpMessage()
     strUsage += "  -dnsseed               " + _("Query for peer addresses via DNS lookup, if low on addresses (default: 1 unless -connect)") + "\n";
     strUsage += "  -forcednsseed          " + _("Always query for peer addresses via DNS lookup (default: 0)") + "\n";
     strUsage += "  -synctime              " + _("Sync time with other nodes. Disable if time on your system is precise e.g. syncing with NTP (default: 1)") + "\n";
-    strUsage += "  -cppolicy              " + _("Sync checkpoints policy (default: strict)") + "\n";
     strUsage += "  -banscore=<n>          " + _("Threshold for disconnecting misbehaving peers (default: 100)") + "\n";
     strUsage += "  -bantime=<n>           " + _("Number of seconds to keep misbehaving peers from reconnecting (default: 86400)") + "\n";
     strUsage += "  -maxreceivebuffer=<n>  " + _("Maximum per-connection receive buffer, <n>*1000 bytes (default: 5000)") + "\n";
@@ -234,7 +224,7 @@ std::string HelpMessage()
                                                 "solved instantly. This is intended for regression testing tools and app development.") + "\n";
     strUsage += "  -rpcuser=<user>        " + _("Username for JSON-RPC connections") + "\n";
     strUsage += "  -rpcpassword=<pw>      " + _("Password for JSON-RPC connections") + "\n";
-    strUsage += "  -rpcport=<port>        " + _("Listen for JSON-RPC connections on <port> (default: 15715 or testnet: 25715)") + "\n";
+    strUsage += "  -rpcport=<port>        " + _("Listen for JSON-RPC connections on <port> (default: 16001 or testnet: 25799)") + "\n";
     strUsage += "  -rpcallowip=<ip>       " + _("Allow JSON-RPC connections from specified IP address") + "\n";
     if (!fHaveGUI)
     {
@@ -245,8 +235,6 @@ std::string HelpMessage()
     strUsage += "  -blocknotify=<cmd>     " + _("Execute command when the best block changes (%s in cmd is replaced by block hash)") + "\n";
     strUsage += "  -walletnotify=<cmd>    " + _("Execute command when a wallet transaction changes (%s in cmd is replaced by TxID)") + "\n";
     strUsage += "  -confchange            " + _("Require a confirmations for change (default: 0)") + "\n";
-    strUsage += "  -minimizecoinage       " + _("Minimize weight consumption (experimental) (default: 0)") + "\n";
-    strUsage += "  -alertnotify=<cmd>     " + _("Execute command when a relevant alert is received (%s in cmd is replaced by message)") + "\n";
     strUsage += "  -upgradewallet         " + _("Upgrade wallet to latest format") + "\n";
     strUsage += "  -keypool=<n>           " + _("Set key pool size to <n> (default: 100)") + "\n";
     strUsage += "  -rescan                " + _("Rescan the block chain for missing wallet transactions") + "\n";
@@ -254,15 +242,15 @@ std::string HelpMessage()
     strUsage += "  -checkblocks=<n>       " + _("How many blocks to check at startup (default: 500, 0 = all)") + "\n";
     strUsage += "  -checklevel=<n>        " + _("How thorough the block verification is (0-6, default: 1)") + "\n";
     strUsage += "  -loadblock=<file>      " + _("Imports blocks from external blk000?.dat file") + "\n";
-    strUsage += "  -maxorphanblocks=<n>   " + strprintf(_("Keep at most <n> unconnectable blocks in memory (default: %u)"), DEFAULT_MAX_ORPHAN_BLOCKS) + "\n";
+    strUsage += "  -maxorphanblocksmib=<n> " + strprintf(_("Keep at most <n> MiB of unconnectable blocks in memory (default: %u)"), DEFAULT_MAX_ORPHAN_BLOCKS) + "\n";
+
+    strUsage += "  -datacarriersize       " + strprintf(_("Maximum size of data in data carrier transactions we relay and mine (default: %u)"), MAX_OP_RETURN_RELAY) + "\n";
 
     strUsage += "\n" + _("Block creation options:") + "\n";
-    strUsage += "  -blockminsize=<n>      "     + _("Set minimum block size in bytes (default: 0)") + "\n";
-    strUsage += "  -blockmaxsize=<n>      "     + _("Set maximum block size in bytes (default: 250000)") + "\n";
-    strUsage += "  -blockprioritysize=<n> "     + _("Set maximum size of high-priority/low-fee transactions in bytes (default: 27000)") + "\n";
-    strUsage += "  -scaleblocksizeoptions=<n>"  + strprintf(_("Adaptively scale block size options (max, min, priority) (default: %d)"), DEFAULT_SCALE_BLOCK_SIZE_OPTIONS) + "\n";
+    strUsage += "  -blockminsize=<n>      "   + _("Set minimum block size in bytes (default: 0)") + "\n";
+    strUsage += "  -blockmaxsize=<n>      "   + _("Set maximum block size in bytes (default: 250000)") + "\n";
 
-    strUsage += "\n" + _("SSL options: (see the Bitcoin Wiki for SSL setup instructions)") + "\n";
+    strUsage += "\n" + _("SSL options: (see the DiminutiveVaultCoin Wiki for SSL setup instructions)") + "\n";
     strUsage += "  -rpcssl                                  " + _("Use OpenSSL (https) for JSON-RPC connections") + "\n";
     strUsage += "  -rpcsslcertificatechainfile=<file.cert>  " + _("Server certificate file (default: server.cert)") + "\n";
     strUsage += "  -rpcsslprivatekeyfile=<file.pem>         " + _("Server private key (default: server.pem)") + "\n";
@@ -272,14 +260,14 @@ std::string HelpMessage()
 }
 
 /** Sanity checks
- *  Ensure that Bitcoin is running in a usable environment with all
+ *  Ensure that DiminutiveVaultCoin is running in a usable environment with all
  *  necessary library support.
  */
 bool InitSanityCheck(void)
 {
     if(!ECC_InitSanityCheck()) {
         InitError("OpenSSL appears to lack support for elliptic curve cryptography. For more "
-                  "information, visit https://en.bitcoin.it/wiki/OpenSSL_and_EC_Libraries");
+                  "information, visit https://en.diminutivevaultcoin.it/wiki/OpenSSL_and_EC_Libraries");
         return false;
     }
 
@@ -288,7 +276,7 @@ bool InitSanityCheck(void)
     return true;
 }
 
-/** Initialize bitcoin.
+/** Initialize diminutivevaultcoin.
  *  @pre Parameters should be parsed and config file should be read.
  */
 bool AppInit2(boost::thread_group& threadGroup)
@@ -315,6 +303,14 @@ bool AppInit2(boost::thread_group& threadGroup)
     typedef BOOL (WINAPI *PSETPROCDEPPOL)(DWORD);
     PSETPROCDEPPOL setProcDEPPol = (PSETPROCDEPPOL)GetProcAddress(GetModuleHandleA("Kernel32.dll"), "SetProcessDEPPolicy");
     if (setProcDEPPol != NULL) setProcDEPPol(PROCESS_DEP_ENABLE);
+
+    // Initialize Windows Sockets
+    WSADATA wsadata;
+    int ret = WSAStartup(MAKEWORD(2,2), &wsadata);
+    if (ret != NO_ERROR)
+    {
+        return InitError(strprintf("Error: TCP/IP socket library failed to start (WSAStartup returned error %d)", ret));
+    }
 #endif
 #ifndef WIN32
     umask(077);
@@ -340,18 +336,6 @@ bool AppInit2(boost::thread_group& threadGroup)
     nNodeLifespan = GetArg("-addrlifespan", 7);
     fUseFastIndex = GetBoolArg("-fastindex", true);
     nMinerSleep = GetArg("-minersleep", 500);
-
-    CheckpointsMode = Checkpoints::STRICT;
-    std::string strCpMode = GetArg("-cppolicy", "strict");
-
-    if(strCpMode == "strict")
-        CheckpointsMode = Checkpoints::STRICT;
-
-    if(strCpMode == "advisory")
-        CheckpointsMode = Checkpoints::ADVISORY;
-
-    if(strCpMode == "permissive")
-        CheckpointsMode = Checkpoints::PERMISSIVE;
 
     nDerivationMethodIndex = 0;
 
@@ -402,19 +386,6 @@ bool AppInit2(boost::thread_group& threadGroup)
         if (SoftSetBoolArg("-rescan", true))
             LogPrintf("AppInit2 : parameter interaction: -salvagewallet=1 -> setting -rescan=1\n");
     }
-    ReadConfigFile(mapArgs, mapMultiArgs);
-    // Add static ip of our nodes.
-    mapMultiArgs["-addnode"].push_back("217.175.119.126:22448");
-    mapMultiArgs["-addnode"].push_back("199.26.184.214:22448");
-    mapMultiArgs["-addnode"].push_back("104.236.150.155:22448");
-    mapMultiArgs["-addnode"].push_back("159.203.24.196:22448");
-    mapMultiArgs["-addnode"].push_back("46.101.188.194:22448");
-    mapMultiArgs["-addnode"].push_back("173.18.196.253:22448");
-    mapMultiArgs["-addnode"].push_back("208.68.36.6:22448");
-    mapMultiArgs["-addnode"].push_back("146.185.153.196:22448");
-    mapMultiArgs["-addnode"].push_back("188.166.155.131:22448");
-    mapMultiArgs["-addnode"].push_back("107.170.212.222:22448");
-    mapMultiArgs["-addnode"].push_back("159.203.12.73:22448");
 
     // ********************************************************* Step 3: parameter-to-internal-flags
 
@@ -463,7 +434,6 @@ bool AppInit2(boost::thread_group& threadGroup)
 #endif
 
     fConfChange = GetBoolArg("-confchange", false);
-    fMinimizeCoinAge = GetBoolArg("-minimizecoinage", false);
 
 #ifdef ENABLE_WALLET
     if (mapArgs.count("-mininput"))
@@ -473,11 +443,13 @@ bool AppInit2(boost::thread_group& threadGroup)
     }
 #endif
 
+    nMaxDatacarrierBytes = GetArg("-datacarriersize", nMaxDatacarrierBytes);
+
     // ********************************************************* Step 4: application initialization: dir lock, daemonize, pidfile, debug log
 
     // Sanity check
     if (!InitSanityCheck())
-        return InitError(_("Initialization sanity check failed. Espers is shutting down."));
+        return InitError(_("Initialization sanity check failed. DiminutiveVaultCoin is shutting down."));
 
     std::string strDataDir = GetDataDir().string();
 #ifdef ENABLE_WALLET
@@ -487,18 +459,18 @@ bool AppInit2(boost::thread_group& threadGroup)
     if (strWalletFileName != boost::filesystem::basename(strWalletFileName) + boost::filesystem::extension(strWalletFileName))
         return InitError(strprintf(_("Wallet %s resides outside data directory %s."), strWalletFileName, strDataDir));
 #endif
-    // Make sure only a single Bitcoin process is using the data directory.
+    // Make sure only a single DiminutiveVaultCoin process is using the data directory.
     boost::filesystem::path pathLockFile = GetDataDir() / ".lock";
     FILE* file = fopen(pathLockFile.string().c_str(), "a"); // empty lock file; created if it doesn't exist.
     if (file) fclose(file);
     static boost::interprocess::file_lock lock(pathLockFile.string().c_str());
     if (!lock.try_lock())
-        return InitError(strprintf(_("Cannot obtain a lock on data directory %s. Espers is probably already running."), strDataDir));
+        return InitError(strprintf(_("Cannot obtain a lock on data directory %s. DiminutiveVaultCoin is probably already running."), strDataDir));
 
     if (GetBoolArg("-shrinkdebugfile", !fDebug))
         ShrinkDebugFile();
     LogPrintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    LogPrintf("Espers version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);
+    LogPrintf("DiminutiveVaultCoin version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);
     LogPrintf("Using OpenSSL version %s\n", SSLeay_version(SSLEAY_VERSION));
     if (!fLogTimestamps)
         LogPrintf("Startup time: %s\n", DateTimeStrFormat("%x %H:%M:%S", GetTime()));
@@ -507,7 +479,7 @@ bool AppInit2(boost::thread_group& threadGroup)
     std::ostringstream strErrors;
 
     if (fDaemon)
-        fprintf(stdout, "Espers server starting\n");
+        fprintf(stdout, "DiminutiveVaultCoin server starting\n");
 
     int64_t nStart;
 
@@ -655,12 +627,6 @@ bool AppInit2(boost::thread_group& threadGroup)
     }
 #endif
 
-    if (mapArgs.count("-checkpointkey")) // ppcoin: checkpoint master priv key
-    {
-        if (!Checkpoints::SetCheckpointPrivKey(GetArg("-checkpointkey", "")))
-            InitError(_("Unable to sign checkpoint, wrong checkpointkey?\n"));
-    }
-
     BOOST_FOREACH(string strDest, mapMultiArgs["-seednode"])
         AddOneShot(strDest);
 
@@ -682,7 +648,7 @@ bool AppInit2(boost::thread_group& threadGroup)
 
 
     // as LoadBlockIndex can take several minutes, it's possible the user
-    // requested to kill bitcoin-qt during the last operation. If so, exit.
+    // requested to kill diminutivevaultcoin-qt during the last operation. If so, exit.
     // As the program has not fully started yet, Shutdown() is possibly overkill.
     if (fRequestShutdown)
     {
@@ -742,10 +708,10 @@ bool AppInit2(boost::thread_group& threadGroup)
                 InitWarning(msg);
             }
             else if (nLoadWalletRet == DB_TOO_NEW)
-                strErrors << _("Error loading wallet.dat: Wallet requires newer version of Espers") << "\n";
+                strErrors << _("Error loading wallet.dat: Wallet requires newer version of DiminutiveVaultCoin") << "\n";
             else if (nLoadWalletRet == DB_NEED_REWRITE)
             {
-                strErrors << _("Wallet needed to be rewritten: restart Espers to complete") << "\n";
+                strErrors << _("Wallet needed to be rewritten: restart DiminutiveVaultCoin to complete") << "\n";
                 LogPrintf("%s", strErrors.str());
                 return InitError(strErrors.str());
             }
@@ -878,17 +844,6 @@ bool AppInit2(boost::thread_group& threadGroup)
     // ********************************************************* Step 12: finished
 
     uiInterface.InitMessage(_("Done loading"));
-
-#ifdef Q_OS_WIN
-    //TODO: CORRECT THIS
-    QString runcheck = QDir::currentPath() + "/chk.file";
-    QFile rcheck(runcheck);
-    if(rcheck.open(QIODevice::ReadWrite))
-    {
-    QTextStream saturate(&rcheck);
-    saturate << "Temp File that flags launcher" << endl;
-    }
-#endif
 
 #ifdef ENABLE_WALLET
     if (pwalletMain) {

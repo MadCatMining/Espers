@@ -13,7 +13,14 @@ class QDateTime;
 class QTimer;
 QT_END_NAMESPACE
 
-/** Model for Bitcoin network client. */
+enum NumConnections {
+    CONNECTIONS_NONE = 0,
+    CONNECTIONS_IN   = (1U << 0),
+    CONNECTIONS_OUT  = (1U << 1),
+    CONNECTIONS_ALL  = (CONNECTIONS_IN | CONNECTIONS_OUT),
+};
+
+/** Model for DiminutiveVaultCoin network client. */
 class ClientModel : public QObject
 {
     Q_OBJECT
@@ -24,7 +31,8 @@ public:
 
     OptionsModel *getOptionsModel();
 
-    int getNumConnections() const;
+    //! Return number of connections, default is in- and outbound (total)
+    int getNumConnections(unsigned int flags = CONNECTIONS_ALL) const;
     int getNumBlocks() const;
     int getNumBlocksAtStartup();
 
@@ -72,7 +80,7 @@ signals:
 public slots:
     void updateTimer();
     void updateNumConnections(int numConnections);
-    void updateAlert(const QString &hash, int status);
+    void updateAlert();
 };
 
 #endif // CLIENTMODEL_H

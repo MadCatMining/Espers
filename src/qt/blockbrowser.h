@@ -1,90 +1,53 @@
 #ifndef BLOCKBROWSER_H
 #define BLOCKBROWSER_H
 
-#include <QWidget>
-
 #include "clientmodel.h"
 #include "main.h"
-#include "wallet.h"
-#include "base58.h"
-
-#include <QDir>
-#include <QFile>
-#include <QProcess>
-#include <QTime>
-#include <QTimer>
-#include <QStringList>
-#include <QMap>
-#include <QSettings>
-#include <QSlider>
-
-double getBlockHardness(int);
-double getTxTotalValue(std::string);
-double convertCoins(int64_t);
-double getTxFees(std::string);
-int getBlockTime(int);
-int getBlocknBits(int);
-int getBlockNonce(int);
-int blocksInPastHours(int);
-int getBlockHashrate(int);
-std::string getInputs(std::string);
-std::string getOutputs(std::string);
-std::string getBlockHash(int);
-std::string getBlockMerkle(int);
-bool addnode(std::string);
-const CBlockIndex* getBlockIndex(int);
-int64_t getInputValue(CTransaction, CScript);
+#include <QDialog>
 
 namespace Ui {
-    class BlockBrowser;
+class BlockBrowser;
 }
 class ClientModel;
-class WalletModel;
 
-QT_BEGIN_NAMESPACE
-class QModelIndex;
-QT_END_NAMESPACE
-
-/** Overview ("home") page widget */
-class BlockBrowser : public QWidget
+class BlockBrowser : public QDialog
 {
     Q_OBJECT
 
 public:
     explicit BlockBrowser(QWidget *parent = 0);
     ~BlockBrowser();
-    void setModel(WalletModel *model);
-
-    //Statistics
-    int heightPrevious;
-    int connectionPrevious;
-    int volumePrevious;
-    int stakeminPrevious;
-    int stakemaxPrevious;
-    QString stakecPrevious;
-    double rewardPrevious;
-    double netPawratePrevious;
-    QString pawratePrevious;
-    double hardnessPrevious;
-    double hardnessPrevious2;
-
+    
+    void setTransactionId(const QString &transactionId);
+    void setModel(ClientModel *model);
+    
 public slots:
-
+    
     void blockClicked();
     void txClicked();
     void updateExplorer(bool);
-    void updateStatistics();
-    void updatePrevious(int, int, int, QString, double, double, double, double, QString, int, int);
-
-signals:
-
-private:
-    Ui::BlockBrowser *ui;
-    WalletModel *model;
-ClientModel *clientModel;
+    double getTxFees(std::string);
 
 private slots:
 
+private:
+    Ui::BlockBrowser *ui;
+    ClientModel *model;
+    
 };
+
+double getTxTotalValue(std::string); 
+double getMoneySupply(qint64 Height);
+double convertCoins(qint64); 
+qint64 getBlockTime(qint64); 
+qint64 getBlocknBits(qint64); 
+qint64 getBlockNonce(qint64); 
+qint64 getBlockHashrate(qint64); 
+std::string getInputs(std::string); 
+std::string getOutputs(std::string); 
+std::string getBlockHash(qint64); 
+std::string getBlockMerkle(qint64); 
+bool addnode(std::string); 
+const CBlockIndex* getBlockIndex(qint64);
 
 #endif // BLOCKBROWSER_H

@@ -1,6 +1,5 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2016-2018 The Espers developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -49,78 +48,58 @@ public:
         // The message start string is designed to be unlikely to occur in normal data.
         // The characters are rarely used upper ASCII, not valid as UTF-8, and produce
         // a large 4-byte int at any alignment.
-        pchMessageStart[0] = 0x4e;
-        pchMessageStart[1] = 0xaa;
-        pchMessageStart[2] = 0x32;
-        pchMessageStart[3] = 0x1c;
-        vAlertPubKey = ParseHex("04e22531e96c9056be6b659c91a94fbfebeb5d5257fe044b88695c62f7c2f81f85d131a669df3be611393f454852a2d08c6314bba5ca3cbe5616262da3d4a6efac");
-        nDefaultPort = 22448;
-        nRPCPort = 22442;
+        pchMessageStart[0] = 0x21;
+        pchMessageStart[1] = 0x1a;
+        pchMessageStart[2] = 0x2e;
+        pchMessageStart[3] = 0x56;
+        nDefaultPort = 49139;
+        nRPCPort = 49122;
+        //nDefaultPort = 16000;
+       // nRPCPort = 16001;	    
+	    
         bnProofOfWorkLimit = CBigNum(~uint256(0) >> 20);
-        bnProofOfStakeLimit = CBigNum(~uint256(0) >> 20);
-
-        const char* pszTimestamp = "Krypton Abandons Ethereum for Bitcoin Proof of Stake Blockchain after 51% Attack : Mon, 05 Sep 2016 07:00:00 GMT";
+	const char* pszTimestamp = "Diminitivevault needs a new chain sha256 failed 20200121"; //
         std::vector<CTxIn> vin;
         vin.resize(1);
         vin[0].scriptSig = CScript() << 0 << CBigNum(42) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
         std::vector<CTxOut> vout;
         vout.resize(1);
         vout[0].SetEmpty();
-        CTransaction txNew(1, timeGenesisBlock, vin, vout, 0);
+        CTransaction txNew(1, 1517516135, vin, vout, 0); // Thursday, February 1, 2018
         genesis.vtx.push_back(txNew);
         genesis.hashPrevBlock = 0;
         genesis.hashMerkleRoot = genesis.BuildMerkleTree();
         genesis.nVersion = 1;
-        genesis.nTime    = timeGenesisBlock;
+        genesis.nTime    = 1517516135; // Thursday, February 1, 2018
         genesis.nBits    = bnProofOfWorkLimit.GetCompact();
-        genesis.nNonce   = nNonceMain;
-        /** Genesis Block MainNet */
-        /*
-        Hashed MainNet Genesis Block Output
-        block.hashMerkleRoot == e85e5d598a47643833dfb5732174813a866ab29888984ec07299d6a29865d2b1
-        block.nTime = 1473058800
-        block.nNonce = 1934069
-        block.GetHash = 000008d508d6e6577991a2f65fd974aea83c0644e6a0e1a3db047488e04398a3
+        genesis.nNonce   = 5070141;
 
-        */
         hashGenesisBlock = genesis.GetHash();
-        assert(hashGenesisBlock == nGenesisBlock);
-        assert(genesis.hashMerkleRoot == nGenesisMerkle);
 
-        /** DEPRICATED IN QT 5.6+ (To compile on Qt5.5.1 and lower uncomment  */
-        /*
-        base58Prefixes[PUBKEY_ADDRESS] = list_of(33);
-        base58Prefixes[SCRIPT_ADDRESS] = list_of(92);
-        base58Prefixes[SECRET_KEY] =     list_of(144);
-        base58Prefixes[EXT_PUBLIC_KEY] = list_of(0x04)(0x88)(0xB2)(0x1E);
-        base58Prefixes[EXT_SECRET_KEY] = list_of(0x04)(0x88)(0xAD)(0xE4);
-        */
-        /** REQUIRED IN QT 5.6+  (To compile on Qt5.5.1 and lower comment out below) */
-        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,33);
-        base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,92);
-        base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,144);
-        base58Prefixes[EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x88)(0xB2)(0x1E).convert_to_container<std::vector<unsigned char> >();
-        base58Prefixes[EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x88)(0xAD)(0xE4).convert_to_container<std::vector<unsigned char> >();
 
-        // Espers dns seeds
-        vSeeds.push_back(CDNSSeedData("cryptocoderz.com",  "esp.cryptocoderz.com"));
+        assert(hashGenesisBlock == uint256("0x2ce9a9e271caa8fc164d29ea497f60f0a0f6a05998db2430bc5003da148b6699"));
+        assert(genesis.hashMerkleRoot == uint256("0x84346f5d939fa8c9d3548f3c3f31ef29f1b7972a43878453d3a5a4c176836459"));
+
+	vSeeds.push_back(CDNSSeedData("95.111.247.164","95.111.247.164"));     // New seed node 1
+	vSeeds.push_back(CDNSSeedData("207.180.216.126","207.180.216.126"));   // New seed node 2
+	vSeeds.push_back(CDNSSeedData("207.180.208.187","207.180.208.187"));   // New seed node 3
+	vSeeds.push_back(CDNSSeedData("78.57.248.53","78.57.248.53"));         // New seed node 4
+        vSeeds.push_back(CDNSSeedData("seed1.dimi.net","51.75.162.95"));       // Old seed node 1 
+	vSeeds.push_back(CDNSSeedData("seed2.dimi.net","51.38.71.12"));        // Old seed node 2
+	vSeeds.push_back(CDNSSeedData("seed3.dimi.net","167.86.94.93"));       // Old seed node 3
+      
+       
+	base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 32);
+        base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1, 30);
+        base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1, 181);
+        base58Prefixes[EXT_PUBLIC_KEY] = boost::assign::list_of(0xAD)(0x1B)(0x12)(0xA4).convert_to_container<std::vector<unsigned char> >();
+        base58Prefixes[EXT_SECRET_KEY] = boost::assign::list_of(0xE1)(0xA3)(0x2B)(0x3E).convert_to_container<std::vector<unsigned char> >();
 
         convertSeed6(vFixedSeeds, pnSeed6_main, ARRAYLEN(pnSeed6_main));
 
-        // Initial block spacing, attempted 40 second block time
-        nTargetSpacing = 1 * 40;
-        // Block rate reduced for ~40 Second block times
-        // Due to hybrid mining blocktime still varied wildly during
-        // this time between 15 seconds and 1 minute
-        if(nBestHeight > nBlocktimeregress)
-            nTargetSpacing = 2.5 * 60;
-        // Block rate reduced for 3-5 Minute block times
-        // this is in conjunction with DGW-v3 retarget fork
-        if(nBestHeight > nGravityFork)
-            nTargetSpacing = BLOCK_SPACING * 1;
-        nTargetTimespan = 10 * nTargetSpacing;
-        nStartPoSBlock = 2125; // Delay PoS start until swap start
+	nLastPOWBlock = 9999999999;
 
+        
     }
 
     virtual const CBlock& GenesisBlock() const { return genesis; }
@@ -146,95 +125,42 @@ public:
         // The message start string is designed to be unlikely to occur in normal data.
         // The characters are rarely used upper ASCII, not valid as UTF-8, and produce
         // a large 4-byte int at any alignment.
-        pchMessageStart[0] = 0x4c;
-        pchMessageStart[1] = 0xe6;
-        pchMessageStart[2] = 0x68;
-        pchMessageStart[3] = 0x5a;
-        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 16);
-        bnProofOfStakeLimit = CBigNum(~uint256(0) >> 16);
-
-        vAlertPubKey = ParseHex("02e22531e96c9056be6b659c91a94fbfebeb5d5257fe044b88695c62f7c2f81f85d131a669df3be611393f454852a2d08c6314bba5ca3cbe5616262db3d4a6efac");
-        nDefaultPort = 32448;
-        nRPCPort = 32440;
+        pchMessageStart[0] = 0x15;
+        pchMessageStart[1] = 0x5a;
+        pchMessageStart[2] = 0xd5;
+        pchMessageStart[3] = 0x21;
+        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 8);
+        nDefaultPort = 4913;
+        nRPCPort = 4912;
+	//nDefaultPort = 1600;
+        //nRPCPort = 1601;
         strDataDir = "testnet";
 
         // Modify the testnet genesis block so the timestamp is valid for a later start.
         genesis.nBits  = bnProofOfWorkLimit.GetCompact();
-        genesis.nNonce = nNonceTest;
-
-        /** Genesis Block TestNet */
-        /*
-        Hashed TestNet Genesis Block Output
-        block.nTime = 1473058800
-        block.nNonce = 8903
-        block.GetHash = 000072d91493eeb338abf5aa8d5c09db0af5f02d613d361d5f6a9906eca2aa74
-        */
+        genesis.nNonce = 612;
+        
         hashGenesisBlock = genesis.GetHash();
-        assert(hashGenesisBlock == hashTestNetGenesisBlock);
+
+
+        assert(hashGenesisBlock == uint256("0x644bb79bd649c703140975d3d73396951eacf3001c3b95dd1a2f50f5630cb293"));
 
         vFixedSeeds.clear();
         vSeeds.clear();
 
-        /** DEPRICATED IN QT 5.6+ (To compile on Qt5.5.1 and lower uncomment  */
-        /*
-        base58Prefixes[PUBKEY_ADDRESS] = list_of(34);
-        base58Prefixes[SCRIPT_ADDRESS] = list_of(94);
-        base58Prefixes[SECRET_KEY]     = list_of(143);
-        base58Prefixes[EXT_PUBLIC_KEY] = list_of(0x04)(0x35)(0x87)(0xCF);
-        base58Prefixes[EXT_SECRET_KEY] = list_of(0x04)(0x35)(0x83)(0x94);
-        */
-        /** REQUIRED IN QT 5.6+  (To compile on Qt5.5.1 and lower comment out below */
-        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,34);
-        base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,94);
-        base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,143);
-        base58Prefixes[EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x35)(0x87)(0xCF).convert_to_container<std::vector<unsigned char> >();
-        base58Prefixes[EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x35)(0x83)(0x94).convert_to_container<std::vector<unsigned char> >();
+        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,117);
+        base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,115);
+        base58Prefixes[SECRET_KEY]     = std::vector<unsigned char>(1,63);
+        base58Prefixes[EXT_PUBLIC_KEY] = boost::assign::list_of(0x14)(0x1a)(0x2c)(0x24).convert_to_container<std::vector<unsigned char> >();
+        base58Prefixes[EXT_SECRET_KEY] = boost::assign::list_of(0x1f)(0xfa)(0x1e)(0x3e).convert_to_container<std::vector<unsigned char> >();
 
         convertSeed6(vFixedSeeds, pnSeed6_test, ARRAYLEN(pnSeed6_test));
 
-        nTargetSpacing = 20;
-        nStartPoSBlock = 2880;
+        nLastPOWBlock = 0x7fffffff;
     }
     virtual Network NetworkID() const { return CChainParams::TESTNET; }
 };
 static CTestNetParams testNetParams;
-
-
-//
-// Regression test
-//
-class CRegTestParams : public CTestNetParams {
-public:
-    CRegTestParams() {
-        pchMessageStart[0] = 0x2b;
-        pchMessageStart[1] = 0xde;
-        pchMessageStart[2] = 0x09;
-        pchMessageStart[3] = 0x1a;
-        bnProofOfWorkLimit = CBigNum(~uint256(0) >> 1);
-        genesis.nTime = timeRegNetGenesis;
-        genesis.nBits  = bnProofOfWorkLimit.GetCompact();
-        genesis.nNonce = nNonceReg;
-        hashGenesisBlock = genesis.GetHash();
-        nDefaultPort = 32445;
-        strDataDir = "regtest";
-
-        /** Genesis Block TestNet */
-        /*
-        Hashed RegNet Genesis Block Output
-        block.hashMerkleRoot == e85e5d598a47643833dfb5732174813a866ab29888984ec07299d6a29865d2b1
-        block.nTime = 1473059000
-        block.nNonce = 8
-        block.GetHash = 511b6eeefb29d66cafae00a0746a8aa912bc13e1a79a7898f81a60ce3a79cea4
-        */
-        assert(hashGenesisBlock == hashRegNetGenesisBlock);
-
-        vSeeds.clear();  // Regtest mode doesn't have any DNS seeds.
-    }
-
-    virtual bool RequireRPCPassword() const { return false; }
-    virtual Network NetworkID() const { return CChainParams::REGTEST; }
-};
-static CRegTestParams regTestParams;
 
 static CChainParams *pCurrentParams = &mainParams;
 
@@ -250,9 +176,7 @@ void SelectParams(CChainParams::Network network) {
         case CChainParams::TESTNET:
             pCurrentParams = &testNetParams;
             break;
-        case CChainParams::REGTEST:
-            pCurrentParams = &regTestParams;
-            break;
+
         default:
             assert(false && "Unimplemented network");
             return;
@@ -260,16 +184,10 @@ void SelectParams(CChainParams::Network network) {
 }
 
 bool SelectParamsFromCommandLine() {
-    bool fRegTest = GetBoolArg("-regtest", false);
+
     bool fTestNet = GetBoolArg("-testnet", false);
 
-    if (fTestNet && fRegTest) {
-        return false;
-    }
-
-    if (fRegTest) {
-        SelectParams(CChainParams::REGTEST);
-    } else if (fTestNet) {
+    if (fTestNet) {
         SelectParams(CChainParams::TESTNET);
     } else {
         SelectParams(CChainParams::MAIN);

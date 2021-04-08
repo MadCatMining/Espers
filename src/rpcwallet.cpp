@@ -17,7 +17,6 @@ using namespace std;
 using namespace json_spirit;
 
 int64_t nWalletUnlockTime;
-int64_t GetPrevAccountBalance = 0;
 static CCriticalSection cs_nWalletUnlockTime;
 
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, json_spirit::Object& entry);
@@ -109,7 +108,7 @@ Value getnewaddress(const Array& params, bool fHelp)
     if (fHelp || params.size() > 1)
         throw runtime_error(
             "getnewaddress [account]\n"
-            "Returns a new Espers address for receiving payments.  "
+            "Returns a new DiminutiveVaultCoin address for receiving payments.  "
             "If [account] is specified, it is added to the address book "
             "so payments received with the address will be credited to [account].");
 
@@ -129,11 +128,11 @@ Value getnewaddress(const Array& params, bool fHelp)
 
     pwalletMain->SetAddressBookName(keyID, strAccount);
 
-    return CBitcoinAddress(keyID).ToString();
+    return CDiminutiveVaultCoinAddress(keyID).ToString();
 }
 
 
-CBitcoinAddress GetAccountAddress(string strAccount, bool bForceNew=false)
+CDiminutiveVaultCoinAddress GetAccountAddress(string strAccount, bool bForceNew=false)
 {
     CWalletDB walletdb(pwalletMain->strWalletFile);
 
@@ -168,7 +167,7 @@ CBitcoinAddress GetAccountAddress(string strAccount, bool bForceNew=false)
         walletdb.WriteAccount(strAccount, account);
     }
 
-    return CBitcoinAddress(account.vchPubKey.GetID());
+    return CDiminutiveVaultCoinAddress(account.vchPubKey.GetID());
 }
 
 Value getaccountaddress(const Array& params, bool fHelp)
@@ -176,7 +175,7 @@ Value getaccountaddress(const Array& params, bool fHelp)
     if (fHelp || params.size() != 1)
         throw runtime_error(
             "getaccountaddress <account>\n"
-            "Returns the current Espers address for receiving payments to this account.");
+            "Returns the current DiminutiveVaultCoin address for receiving payments to this account.");
 
     // Parse the account first so we don't generate a key if there's an error
     string strAccount = AccountFromValue(params[0]);
@@ -194,12 +193,12 @@ Value setaccount(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
-            "setaccount <Espersaddress> <account>\n"
+            "setaccount <diminutivevaultcoinaddress> <account>\n"
             "Sets the account associated with the given address.");
 
-    CBitcoinAddress address(params[0].get_str());
+    CDiminutiveVaultCoinAddress address(params[0].get_str());
     if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Espers address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid DiminutiveVaultCoin address");
 
 
     string strAccount;
@@ -224,12 +223,12 @@ Value getaccount(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
-            "getaccount <Espersaddress>\n"
+            "getaccount <diminutivevaultcoinaddress>\n"
             "Returns the account associated with the given address.");
 
-    CBitcoinAddress address(params[0].get_str());
+    CDiminutiveVaultCoinAddress address(params[0].get_str());
     if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Espers address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid DiminutiveVaultCoin address");
 
     string strAccount;
     map<CTxDestination, string>::iterator mi = pwalletMain->mapAddressBook.find(address.Get());
@@ -250,9 +249,9 @@ Value getaddressesbyaccount(const Array& params, bool fHelp)
 
     // Find all addresses that have the given account
     Array ret;
-    BOOST_FOREACH(const PAIRTYPE(CBitcoinAddress, string)& item, pwalletMain->mapAddressBook)
+    BOOST_FOREACH(const PAIRTYPE(CDiminutiveVaultCoinAddress, string)& item, pwalletMain->mapAddressBook)
     {
-        const CBitcoinAddress& address = item.first;
+        const CDiminutiveVaultCoinAddress& address = item.first;
         const string& strName = item.second;
         if (strName == strAccount)
             ret.push_back(address.ToString());
@@ -264,13 +263,13 @@ Value sendtoaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 4)
         throw runtime_error(
-            "sendtoaddress <Espersaddress> <amount> [comment] [comment-to]\n"
-            "<amount> is a real and is rounded to the nearest 0.000001"
+            "sendtoaddress <diminutivevaultcoinaddress> <amount> [comment] [comment-to]\n"
+            "<amount> is a real and is rounded to the nearest 0.00000001"
             + HelpRequiringPassphrase());
 
-    CBitcoinAddress address(params[0].get_str());
+    CDiminutiveVaultCoinAddress address(params[0].get_str());
     if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Espers address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid DiminutiveVaultCoin address");
 
     // Amount
     int64_t nAmount = AmountFromValue(params[1]);
@@ -286,6 +285,42 @@ Value sendtoaddress(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Error: Please enter the wallet passphrase with walletpassphrase first.");
 
     string strError = pwalletMain->SendMoneyToDestination(address.Get(), nAmount, wtx);
+    if (strError != "")
+        throw JSONRPCError(RPC_WALLET_ERROR, strError);
+
+    return wtx.GetHash().GetHex();
+}
+
+Value burn(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 2)
+        throw runtime_error(
+            "burn <amount> [hex string]\n"
+            "<amount> is a real and is rounded to the nearest 0.00000001"
+            + HelpRequiringPassphrase());
+
+    CScript scriptPubKey;
+
+    if (params.size() > 1) {
+        vector<unsigned char> data;
+        if (params[1].get_str().size() > 0){
+            data = ParseHexV(params[1], "data");
+        } else {
+            // Empty data is valid
+        }
+        scriptPubKey = CScript() << OP_RETURN << data;
+    } else {
+        scriptPubKey = CScript() << OP_RETURN;
+    }
+
+    // Amount
+    int64_t nAmount = AmountFromValue(params[0], true);
+
+    if (pwalletMain->IsLocked())
+        throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Error: Please enter the wallet passphrase with walletpassphrase first.");
+
+    CWalletTx wtx;
+    string strError = pwalletMain->SendMoney(scriptPubKey, nAmount, wtx);
     if (strError != "")
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
 
@@ -309,12 +344,12 @@ Value listaddressgroupings(const Array& params, bool fHelp)
         BOOST_FOREACH(CTxDestination address, grouping)
         {
             Array addressInfo;
-            addressInfo.push_back(CBitcoinAddress(address).ToString());
+            addressInfo.push_back(CDiminutiveVaultCoinAddress(address).ToString());
             addressInfo.push_back(ValueFromAmount(balances[address]));
             {
                 LOCK(pwalletMain->cs_wallet);
-                if (pwalletMain->mapAddressBook.find(CBitcoinAddress(address).Get()) != pwalletMain->mapAddressBook.end())
-                    addressInfo.push_back(pwalletMain->mapAddressBook.find(CBitcoinAddress(address).Get())->second);
+                if (pwalletMain->mapAddressBook.find(CDiminutiveVaultCoinAddress(address).Get()) != pwalletMain->mapAddressBook.end())
+                    addressInfo.push_back(pwalletMain->mapAddressBook.find(CDiminutiveVaultCoinAddress(address).Get())->second);
             }
             jsonGrouping.push_back(addressInfo);
         }
@@ -327,7 +362,7 @@ Value signmessage(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 2)
         throw runtime_error(
-            "signmessage <Espersaddress> <message>\n"
+            "signmessage <diminutivevaultcoinaddress> <message>\n"
             "Sign a message with the private key of an address");
 
     EnsureWalletIsUnlocked();
@@ -335,7 +370,7 @@ Value signmessage(const Array& params, bool fHelp)
     string strAddress = params[0].get_str();
     string strMessage = params[1].get_str();
 
-    CBitcoinAddress addr(strAddress);
+    CDiminutiveVaultCoinAddress addr(strAddress);
     if (!addr.IsValid())
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid address");
 
@@ -362,14 +397,14 @@ Value getreceivedbyaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
-            "getreceivedbyaddress <Espersaddress> [minconf=1]\n"
-            "Returns the total amount received by <Espersaddress> in transactions with at least [minconf] confirmations.");
+            "getreceivedbyaddress <diminutivevaultcoinaddress> [minconf=1]\n"
+            "Returns the total amount received by <diminutivevaultcoinaddress> in transactions with at least [minconf] confirmations.");
 
-    // Bitcoin address
-    CBitcoinAddress address = CBitcoinAddress(params[0].get_str());
+    // DiminutiveVaultCoin address
+    CDiminutiveVaultCoinAddress address = CDiminutiveVaultCoinAddress(params[0].get_str());
     CScript scriptPubKey;
     if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Espers address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid DiminutiveVaultCoin address");
     scriptPubKey.SetDestination(address.Get());
     if (!IsMine(*pwalletMain,scriptPubKey))
         return (double)0.0;
@@ -447,6 +482,7 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
     return (double)nAmount / (double)COIN;
 }
 
+
 int64_t GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMinDepth)
 {
     int64_t nBalance = 0;
@@ -468,9 +504,6 @@ int64_t GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMi
 
     // Tally internal accounting entries
     nBalance += walletdb.GetAccountCreditDebit(strAccount);
-
-    // Record balance for Velocity
-    GetPrevAccountBalance = nBalance;
 
     return nBalance;
 }
@@ -592,14 +625,14 @@ Value sendfrom(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 3 || params.size() > 6)
         throw runtime_error(
-            "sendfrom <fromaccount> <toEspersaddress> <amount> [minconf=1] [comment] [comment-to]\n"
-            "<amount> is a real and is rounded to the nearest 0.000001"
+            "sendfrom <fromaccount> <todiminutivevaultcoinaddress> <amount> [minconf=1] [comment] [comment-to]\n"
+            "<amount> is a real and is rounded to the nearest 0.00000001"
             + HelpRequiringPassphrase());
 
     string strAccount = AccountFromValue(params[0]);
-    CBitcoinAddress address(params[1].get_str());
+    CDiminutiveVaultCoinAddress address(params[1].get_str());
     if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Espers address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid DiminutiveVaultCoin address");
     int64_t nAmount = AmountFromValue(params[2]);
 
     int nMinDepth = 1;
@@ -648,15 +681,15 @@ Value sendmany(const Array& params, bool fHelp)
     if (params.size() > 3 && params[3].type() != null_type && !params[3].get_str().empty())
         wtx.mapValue["comment"] = params[3].get_str();
 
-    set<CBitcoinAddress> setAddress;
+    set<CDiminutiveVaultCoinAddress> setAddress;
     vector<pair<CScript, int64_t> > vecSend;
 
     int64_t totalAmount = 0;
     BOOST_FOREACH(const Pair& s, sendTo)
     {
-        CBitcoinAddress address(s.name_);
+        CDiminutiveVaultCoinAddress address(s.name_);
         if (!address.IsValid())
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, string("Invalid Espers address: ")+s.name_);
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, string("Invalid DiminutiveVaultCoin address: ")+s.name_);
 
         if (setAddress.count(address))
             throw JSONRPCError(RPC_INVALID_PARAMETER, string("Invalid parameter, duplicated address: ")+s.name_);
@@ -700,7 +733,7 @@ Value addmultisigaddress(const Array& params, bool fHelp)
     {
         string msg = "addmultisigaddress <nrequired> <'[\"key\",\"key\"]'> [account]\n"
             "Add a nrequired-to-sign multisignature address to the wallet\"\n"
-            "each key is a Espers address or hex-encoded public key\n"
+            "each key is a DiminutiveVaultCoin address or hex-encoded public key\n"
             "If [account] is specified, assign address to [account].";
         throw runtime_error(msg);
     }
@@ -724,8 +757,8 @@ Value addmultisigaddress(const Array& params, bool fHelp)
     {
         const std::string& ks = keys[i].get_str();
 
-        // Case 1: Bitcoin address and we have full public key:
-        CBitcoinAddress address(ks);
+        // Case 1: DiminutiveVaultCoin address and we have full public key:
+        CDiminutiveVaultCoinAddress address(ks);
         if (pwalletMain && address.IsValid())
         {
             CKeyID keyID;
@@ -763,7 +796,7 @@ Value addmultisigaddress(const Array& params, bool fHelp)
         throw runtime_error("AddCScript() failed");
 
     pwalletMain->SetAddressBookName(innerID, strAccount);
-    return CBitcoinAddress(innerID).ToString();
+    return CDiminutiveVaultCoinAddress(innerID).ToString();
 }
 
 Value addredeemscript(const Array& params, bool fHelp)
@@ -788,7 +821,7 @@ Value addredeemscript(const Array& params, bool fHelp)
         throw runtime_error("AddCScript() failed");
 
     pwalletMain->SetAddressBookName(innerID, strAccount);
-    return CBitcoinAddress(innerID).ToString();
+    return CDiminutiveVaultCoinAddress(innerID).ToString();
 }
 
 struct tallyitem
@@ -815,7 +848,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
         fIncludeEmpty = params[1].get_bool();
 
     // Tally
-    map<CBitcoinAddress, tallyitem> mapTally;
+    map<CDiminutiveVaultCoinAddress, tallyitem> mapTally;
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it)
     {
         const CWalletTx& wtx = (*it).second;
@@ -842,11 +875,11 @@ Value ListReceived(const Array& params, bool fByAccounts)
     // Reply
     Array ret;
     map<string, tallyitem> mapAccountTally;
-    BOOST_FOREACH(const PAIRTYPE(CBitcoinAddress, string)& item, pwalletMain->mapAddressBook)
+    BOOST_FOREACH(const PAIRTYPE(CDiminutiveVaultCoinAddress, string)& item, pwalletMain->mapAddressBook)
     {
-        const CBitcoinAddress& address = item.first;
+        const CDiminutiveVaultCoinAddress& address = item.first;
         const string& strAccount = item.second;
-        map<CBitcoinAddress, tallyitem>::iterator it = mapTally.find(address);
+        map<CDiminutiveVaultCoinAddress, tallyitem>::iterator it = mapTally.find(address);
         if (it == mapTally.end() && !fIncludeEmpty)
             continue;
 
@@ -927,7 +960,7 @@ Value listreceivedbyaccount(const Array& params, bool fHelp)
 
 static void MaybePushAddress(Object & entry, const CTxDestination &dest)
 {
-    CBitcoinAddress addr;
+    CDiminutiveVaultCoinAddress addr;
     if (addr.Set(dest))
         entry.push_back(Pair("address", addr.ToString()));
 }
@@ -1353,7 +1386,10 @@ Value walletpassphrase(const Array& params, bool fHelp)
     else
         fWalletUnlockStakingOnly = false;
 
-    return Value::null;
+    Object ret;
+    ret.push_back(Pair("Unlocked for staking only", fWalletUnlockStakingOnly));
+
+    return ret;
 }
 
 
@@ -1442,7 +1478,7 @@ Value encryptwallet(const Array& params, bool fHelp)
     // slack space in .dat files; that is bad if the old data is
     // unencrypted private keys. So:
     StartShutdown();
-    return "wallet encrypted; Espers server stopping, restart to run with encrypted wallet. The keypool has been flushed, you need to make a new backup.";
+    return "wallet encrypted; DiminutiveVaultCoin server stopping, restart to run with encrypted wallet. The keypool has been flushed, you need to make a new backup.";
 }
 
 
@@ -1556,7 +1592,7 @@ Value makekeypair(const Array& params, bool fHelp)
     string strPrefix = "";
     if (params.size() > 0)
         strPrefix = params[0].get_str();
- 
+
     CKey key;
     key.MakeNewKey(false);
 

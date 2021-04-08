@@ -2,8 +2,8 @@
 // Copyright (c) 2009-2013 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#ifndef ESPERS_CORE_H
-#define ESPERS_CORE_H
+#ifndef DIMINUTIVEVAULT_CORE_H
+#define DIMINUTIVEVAULT_CORE_H
 
 #include "uint256.h"
 #include "serialize.h"
@@ -185,6 +185,12 @@ public:
     uint256 GetHash() const
     {
         return SerializeHash(*this);
+    }
+
+    bool IsUnspendable() const
+    {
+        return IsEmpty() ||
+               (scriptPubKey.size() > 0 && *scriptPubKey.begin() == OP_RETURN);
     }
 
     friend bool operator==(const CTxOut& a, const CTxOut& b)

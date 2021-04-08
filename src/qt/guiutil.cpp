@@ -2,9 +2,9 @@
 
 #include "guiutil.h"
 
-#include "bitcoinaddressvalidator.h"
+#include "diminutivevaultcoinaddressvalidator.h"
 #include "walletmodel.h"
-#include "bitcoinunits.h"
+#include "diminutivevaultcoinunits.h"
 
 #include "util.h"
 #include "init.h"
@@ -54,7 +54,7 @@ QString dateTimeStr(qint64 nTime)
     return dateTimeStr(QDateTime::fromTime_t((qint32)nTime));
 }
 
-QFont bitcoinAddressFont()
+QFont diminutivevaultcoinAddressFont()
 {
     QFont font("Monospace");
 #if QT_VERSION >= 0x040800
@@ -67,9 +67,9 @@ QFont bitcoinAddressFont()
 
 void setupAddressWidget(QLineEdit *widget, QWidget *parent)
 {
-    widget->setMaxLength(BitcoinAddressValidator::MaxAddressLength);
-    widget->setValidator(new BitcoinAddressValidator(parent));
-    widget->setFont(bitcoinAddressFont());
+    widget->setMaxLength(DiminutiveVaultCoinAddressValidator::MaxAddressLength);
+    widget->setValidator(new DiminutiveVaultCoinAddressValidator(parent));
+    widget->setFont(diminutivevaultcoinAddressFont());
 }
 
 void setupAmountWidget(QLineEdit *widget, QWidget *parent)
@@ -81,10 +81,10 @@ void setupAmountWidget(QLineEdit *widget, QWidget *parent)
     widget->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
 }
 
-bool parseBitcoinURI(const QUrl &uri, SendCoinsRecipient *out)
+bool parseDiminutiveVaultCoinURI(const QUrl &uri, SendCoinsRecipient *out)
 {
-    // Espers: check prefix
-    if(uri.scheme() != QString("Espers"))
+    // NovaCoin: check prefix
+    if(uri.scheme() != QString("diminutivevaultcoin"))
         return false;
 
     SendCoinsRecipient rv;
@@ -109,7 +109,7 @@ bool parseBitcoinURI(const QUrl &uri, SendCoinsRecipient *out)
         {
             if(!i->second.isEmpty())
             {
-                if(!BitcoinUnits::parse(BitcoinUnits::BTC, i->second, &rv.amount))
+                if(!DiminutiveVaultCoinUnits::parse(DiminutiveVaultCoinUnits::DIMI, i->second, &rv.amount))
                 {
                     return false;
                 }
@@ -127,18 +127,18 @@ bool parseBitcoinURI(const QUrl &uri, SendCoinsRecipient *out)
     return true;
 }
 
-bool parseBitcoinURI(QString uri, SendCoinsRecipient *out)
+bool parseDiminutiveVaultCoinURI(QString uri, SendCoinsRecipient *out)
 {
-    // Convert Espers:// to Espers:
+    // Convert diminutivevaultcoin:// to diminutivevaultcoin:
     //
-    //    Cannot handle this later, because bitcoin:// will cause Qt to see the part after // as host,
+    //    Cannot handle this later, because diminutivevaultcoin:// will cause Qt to see the part after // as host,
     //    which will lower-case it (and thus invalidate the address).
-    if(uri.startsWith("Espers://"))
+    if(uri.startsWith("diminutivevaultcoin://"))
     {
-        uri.replace(0, 12, "Espers:");
+        uri.replace(0, 12, "diminutivevaultcoin:");
     }
     QUrl uriInstance(uri);
-    return parseBitcoinURI(uriInstance, out);
+    return parseDiminutiveVaultCoinURI(uriInstance, out);
 }
 
 QString HtmlEscape(const QString& str, bool fMultiLine)
@@ -252,6 +252,15 @@ void openDebugLogfile()
         QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(pathDebug.string())));
 }
 
+void openConfigfile()
+{
+    boost::filesystem::path pathConfig = GetConfigFile();
+
+    /* Open diminutivevaultcoin.conf with the associated application */
+    if (boost::filesystem::exists(pathConfig))
+        QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(pathConfig.string())));
+}
+
 ToolTipToRichTextFilter::ToolTipToRichTextFilter(int size_threshold, QObject *parent) :
     QObject(parent), size_threshold(size_threshold)
 {
@@ -279,12 +288,12 @@ bool ToolTipToRichTextFilter::eventFilter(QObject *obj, QEvent *evt)
 #ifdef WIN32
 boost::filesystem::path static StartupShortcutPath()
 {
-    return GetSpecialFolderPath(CSIDL_STARTUP) / "Espers.lnk";
+    return GetSpecialFolderPath(CSIDL_STARTUP) / "DiminutiveVaultCoin.lnk";
 }
 
 bool GetStartOnSystemStartup()
 {
-    // check for Bitcoin.lnk
+    // check for DiminutiveVaultCoin.lnk
     return boost::filesystem::exists(StartupShortcutPath());
 }
 
@@ -361,7 +370,7 @@ boost::filesystem::path static GetAutostartDir()
 
 boost::filesystem::path static GetAutostartFilePath()
 {
-    return GetAutostartDir() / "Espers.desktop";
+    return GetAutostartDir() / "diminutivevaultcoin.desktop";
 }
 
 bool GetStartOnSystemStartup()
@@ -399,10 +408,10 @@ bool SetStartOnSystemStartup(bool fAutoStart)
         boost::filesystem::ofstream optionFile(GetAutostartFilePath(), std::ios_base::out|std::ios_base::trunc);
         if (!optionFile.good())
             return false;
-        // Write a bitcoin.desktop file to the autostart directory:
+        // Write a diminutivevaultcoin.desktop file to the autostart directory:
         optionFile << "[Desktop Entry]\n";
         optionFile << "Type=Application\n";
-        optionFile << "Name=Espers\n";
+        optionFile << "Name=DiminutiveVaultCoin\n";
         optionFile << "Exec=" << pszExePath << " -min\n";
         optionFile << "Terminal=false\n";
         optionFile << "Hidden=false\n";
@@ -423,10 +432,10 @@ bool SetStartOnSystemStartup(bool fAutoStart) { return false; }
 HelpMessageBox::HelpMessageBox(QWidget *parent) :
     QMessageBox(parent)
 {
-    header = tr("Espers-Qt") + " " + tr("version") + " " +
+    header = tr("DiminutiveVaultCoin-Qt") + " " + tr("version") + " " +
         QString::fromStdString(FormatFullVersion()) + "\n\n" +
         tr("Usage:") + "\n" +
-        "  Espers-qt [" + tr("command-line options") + "]                     " + "\n";
+        "  diminutivevaultcoin-qt [" + tr("command-line options") + "]                     " + "\n";
 
     coreOptions = QString::fromStdString(HelpMessage());
 
@@ -435,7 +444,7 @@ HelpMessageBox::HelpMessageBox(QWidget *parent) :
         "  -min                   " + tr("Start minimized") + "\n" +
         "  -splash                " + tr("Show splash screen on startup (default: 1)") + "\n";
 
-    setWindowTitle(tr("Espers-Qt"));
+    setWindowTitle(tr("DiminutiveVaultCoin-Qt"));
     setTextFormat(Qt::PlainText);
     // setMinimumWidth is ignored for QMessageBox so put in non-breaking spaces to make it wider.
     setText(header + QString(QChar(0x2003)).repeated(50));
@@ -458,6 +467,39 @@ void HelpMessageBox::showOrPrint()
         // On other operating systems, print help text to console
         printToConsole();
 #endif
+}
+
+void SetBlackThemeQSS(QApplication& app)
+{
+    app.setStyleSheet("QWidget        { background: rgb(41,44,48); }"
+                      "QFrame         { border: none; }"
+                      "QComboBox      { color: rgb(79, 194, 196); }"//
+                      "QComboBox QAbstractItemView::item { color: rgb(0, 140, 145); }"//
+                      "QPushButton    { background: rgb(63,67,72); color: rgb(79, 194, 196); }"//
+                      "QDoubleSpinBox { background: rgb(63,67,72); color: rgb(79, 194, 196); border-color: rgb(63,67,72); }"//
+                      "QLineEdit      { background: rgb(63,67,72); color: rgb(79, 194, 196); border-color: rgb(63,67,72); }"//
+                      "QTextEdit      { background: rgb(63,67,72); color: rgb(79, 194, 196); }"//x
+                      "QPlainTextEdit { background: rgb(63,67,72); color: rgb(79, 194, 196); }"//x
+                      "QMenuBar       { color: rgb(79, 194, 196)}" 
+                      "QMenu          { background: rgb(63,67,72); color: rgb(79, 194, 196)}"
+                      "QMenu::item:selected { background-color: rgb(66,71,78); }"
+                      "QLabel         { color: rgb(79, 194, 196); }"
+                      "QScrollBar     { color: rgb(79, 194, 196); }"
+                      "QCheckBox      { color: rgb(79, 194, 196); }"
+                      "QRadioButton   { color: rgb(79, 194, 196); }"
+                      "QTabBar::tab   { color: rgb(79, 194, 196); border: 1px solid rgb(17, 45, 46); border-bottom: none; padding: 5px; }"
+                      "QTabBar::tab:selected  { background: rgb(17, 45, 46);  }"
+                      "QTabBar::tab:!selected { background: rgb(24,26,30); margin-top: 2px; }"
+                      "QTabWidget::pane { border: 1px solid rgb(79, 194, 196); }"
+                      "QToolButton    { background: rgb(30,32,36); color: rgb(79, 194, 196); border: none; border-left-color: rgb(66,71,78); border-left-style: solid; border-left-width: 6px; margin-top: 8px; margin-bottom: 8px; }"
+                      "QToolButton:checked { color: rgb(79, 194, 196); border: none; border-left-color: rgb(66,71,78); border-left-style: solid; border-left-width: 6px; }"
+                      "QProgressBar   { color: rgb(79, 194, 196); border-color: rgb(0, 31, 48); border-width: 3px; border-style: solid; }"
+                      "QProgressBar::chunk { background: rgb(0, 31, 48); }"
+                      "QTreeView::item { background: rgb(41,44,48); color: rgb(79, 194, 196); }"//
+                      "QTreeView::item:selected { background-color: rgb(63,67,72); }"//
+                      "QTableView     { background: rgb(66,71,78); color: rgb(79, 194, 196); gridline-color: rgb(66,71,78); }"//
+                      "QHeaderView::section { background: rgb(29,34,39); color: rgb(79, 194, 196); }"
+                      "QToolBar       { background: rgb(30,32,36); border: none; }");
 }
 
 } // namespace GUIUtil

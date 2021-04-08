@@ -3,8 +3,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef H_ESPERS_SCRIPT
-#define H_ESPERS_SCRIPT
+#ifndef H_DIMINUTIVEVAULT_SCRIPT
+#define H_DIMINUTIVEVAULT_SCRIPT
 
 #include <string>
 #include <vector>
@@ -23,7 +23,8 @@ typedef std::vector<unsigned char> valtype;
 class CTransaction;
 
 static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520; // bytes
-static const unsigned int MAX_OP_RETURN_RELAY = 40;      // bytes
+static const unsigned int MAX_OP_RETURN_RELAY = 15000;   // bytes
+extern unsigned nMaxDatacarrierBytes;
 
 /** Signature hash types/flags */
 enum
@@ -102,7 +103,7 @@ public:
  *  * CNoDestination: no destination set
  *  * CKeyID: TX_PUBKEYHASH destination
  *  * CScriptID: TX_SCRIPTHASH destination
- *  A CTxDestination is the internal data type encoded in a CBitcoinAddress
+ *  A CTxDestination is the internal data type encoded in a CDiminutiveVaultCoinAddress
  */
 typedef boost::variant<CNoDestination, CKeyID, CScriptID> CTxDestination;
 
@@ -567,7 +568,7 @@ public:
         return nFound;
     }
 
-    // Pre-version-0.6, Bitcoin always counted CHECKMULTISIGs
+    // Pre-version-0.6, DiminutiveVaultCoin always counted CHECKMULTISIGs
     // as 20 sigops. With pay-to-script-hash, that changed:
     // CHECKMULTISIGs serialized in scriptSigs are
     // counted more accurately, assuming they are of the form

@@ -228,20 +228,10 @@ public:
     }
 
     bool Verify(const uint256 &hash, const std::vector<unsigned char>& vchSig) {
-             // New versions of OpenSSL will reject non-canonical DER signatures. de/re-serialize first.
-            unsigned char *norm_der = NULL;
-            ECDSA_SIG *norm_sig = ECDSA_SIG_new();
-            const unsigned char* sigptr = &vchSig[0];
-            d2i_ECDSA_SIG(&norm_sig, &sigptr, vchSig.size());
-            int derlen = i2d_ECDSA_SIG(norm_sig, &norm_der);
-            ECDSA_SIG_free(norm_sig);
-            if (derlen <= 0)
-                return false;
-
-            // -1 = error, 0 = bad sig, 1 = good
-            bool ret = ECDSA_verify(0, (unsigned char*)&hash, sizeof(hash), norm_der, derlen, pkey) == 1;
-            OPENSSL_free(norm_der);
-            return ret;
+        // -1 = error, 0 = bad sig, 1 = good
+        if (ECDSA_verify(0, (unsigned char*)&hash, sizeof(hash), &vchSig[0], vchSig.size(), pkey) != 1)
+            return false;
+        return true;
     }
 
     bool SignCompact(const uint256 &hash, unsigned char *p64, int &rec) {
@@ -415,32 +405,6 @@ bool CKey::Check(const unsigned char *vch) {
 bool CKey::CheckSignatureElement(const unsigned char *vch, int len, bool half) {
     return CompareBigEndian(vch, len, vchZero, 0) > 0 &&
            CompareBigEndian(vch, len, half ? vchMaxModHalfOrder : vchMaxModOrder, 32) <= 0;
-}
-
-bool CKey::ReserealizeSignature(std::vector<unsigned char>& vchSig) {
-    unsigned char *pos;
-
-    if (vchSig.empty())
-        return false;
-
-    pos = &vchSig[0];
-    ECDSA_SIG *sig = d2i_ECDSA_SIG(NULL, (const unsigned char **)&pos, vchSig.size());
-    if (sig == NULL)
-        return false;
-
-    bool ret = false;
-    int nSize = i2d_ECDSA_SIG(sig, NULL);
-    if (nSize > 0) {
-        vchSig.resize(nSize); // grow or shrink as needed
-
-        pos = &vchSig[0];
-        i2d_ECDSA_SIG(sig, &pos);
-
-        ret = true;
-    }
-
-    ECDSA_SIG_free(sig);
-    return ret;
 }
 
 const unsigned char vchOrder[32] = {

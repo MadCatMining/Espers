@@ -5,14 +5,14 @@
 // client versioning
 //
 
-// These need to be macros, as version.cpp's and bitcoin-qt.rc's voodoo requires it
-#define CLIENT_VERSION_MAJOR       0
-#define CLIENT_VERSION_MINOR       8
-#define CLIENT_VERSION_REVISION    7
-#define CLIENT_VERSION_BUILD       3
+// These need to be macros, as version.cpp's and diminutivevaultcoin-qt.rc's voodoo requires it
+#define CLIENT_VERSION_MAJOR       1
+#define CLIENT_VERSION_MINOR       0
+#define CLIENT_VERSION_REVISION    0
+#define CLIENT_VERSION_BUILD       4
 
 // Set to true for release, false for prerelease or test build
-#define CLIENT_VERSION_IS_RELEASE  false
+#define CLIENT_VERSION_IS_RELEASE  true
 
 // Converts the parameter X to a string after macro replacement on X has been performed.
 // Don't merge these into one macro!

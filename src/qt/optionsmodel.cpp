@@ -1,12 +1,14 @@
 #include "optionsmodel.h"
 
-#include "bitcoinunits.h"
+#include "diminutivevaultcoinunits.h"
 #include "init.h"
 #include "wallet.h"
 #include "walletdb.h"
 #include "guiutil.h"
 
 #include <QSettings>
+
+bool fUseBlackTheme;
 
 OptionsModel::OptionsModel(QObject *parent) :
     QAbstractListModel(parent)
@@ -37,22 +39,21 @@ void OptionsModel::Init()
     QSettings settings;
 
     // These are Qt-only settings:
-    nDisplayUnit = settings.value("nDisplayUnit", BitcoinUnits::BTC).toInt();
-    fMinimizeToTray = settings.value("fMinimizeToTray", false).toBool();
-    fMinimizeOnClose = settings.value("fMinimizeOnClose", false).toBool();
+    nDisplayUnit = settings.value("nDisplayUnit", DiminutiveVaultCoinUnits::DIMI).toInt();
+    fMinimizeToTray = settings.value("fMinimizeToTray", true).toBool();
+    fMinimizeOnClose = settings.value("fMinimizeOnClose", true).toBool();
     fCoinControlFeatures = settings.value("fCoinControlFeatures", false).toBool();
     nTransactionFee = settings.value("nTransactionFee").toLongLong();
     nReserveBalance = settings.value("nReserveBalance").toLongLong();
     language = settings.value("language", "").toString();
+    fUseBlackTheme = settings.value("fUseBlackTheme", true).toBool();
 
-    // These are shared with core Bitcoin; we want
+    // These are shared with core DiminutiveVaultCoin; we want
     // command-line options to override the GUI settings:
     if (settings.contains("fUseUPnP"))
         SoftSetBoolArg("-upnp", settings.value("fUseUPnP").toBool());
     if (settings.contains("addrProxy") && settings.value("fUseProxy").toBool())
         SoftSetArg("-proxy", settings.value("addrProxy").toString().toStdString());
-    if (settings.contains("fMinimizeCoinAge"))
-        SoftSetBoolArg("-minimizecoinage", settings.value("fMinimizeCoinAge").toBool());
     if (!language.isEmpty())
         SoftSetArg("-lang", language.toStdString());
 }
@@ -103,8 +104,8 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const
             return settings.value("language", "");
         case CoinControlFeatures:
             return QVariant(fCoinControlFeatures);
-        case MinimizeCoinAge:
-            return settings.value("fMinimizeCoinAge", GetBoolArg("-minimizecoinage", false));
+        case UseBlackTheme:
+            return QVariant(fUseBlackTheme);
         default:
             return QVariant();
         }
@@ -184,10 +185,10 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
             emit coinControlFeaturesChanged(fCoinControlFeatures);
             }
             break;
-        case MinimizeCoinAge:
-           fMinimizeCoinAge = value.toBool();
-           settings.setValue("fMinimizeCoinAge", fMinimizeCoinAge);
-           break;
+        case UseBlackTheme:
+            fUseBlackTheme = value.toBool();
+            settings.setValue("fUseBlackTheme", fUseBlackTheme);
+            break;
         default:
             break;
         }

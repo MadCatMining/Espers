@@ -1,6 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2016-2018 The CryptoCoderz Team / Espers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -924,7 +923,7 @@ static std::string FormatException(std::exception* pex, const char* pszThread)
     char pszModule[MAX_PATH] = "";
     GetModuleFileNameA(NULL, pszModule, sizeof(pszModule));
 #else
-    const char* pszModule = "Espers";
+    const char* pszModule = "diminutivevaultcoin";
 #endif
     if (pex)
         return strprintf(
@@ -954,13 +953,13 @@ void PrintExceptionContinue(std::exception* pex, const char* pszThread)
 boost::filesystem::path GetDefaultDataDir()
 {
     namespace fs = boost::filesystem;
-    // Windows < Vista: C:\Documents and Settings\Username\Application Data\ESP
-    // Windows >= Vista: C:\Users\Username\AppData\Roaming\ESP
-    // Mac: ~/Library/Application Support/ESP
-    // Unix: ~/.ESP
+    // Windows < Vista: C:\Documents and Settings\Username\Application Data\DiminutiveVaultCoin
+    // Windows >= Vista: C:\Users\Username\AppData\Roaming\DiminutiveVaultCoin
+    // Mac: ~/Library/Application Support/DiminutiveVaultCoin
+    // Unix: ~/.diminutivevaultcoin
 #ifdef WIN32
     // Windows
-    return GetSpecialFolderPath(CSIDL_APPDATA) / "ESP";
+    return GetSpecialFolderPath(CSIDL_APPDATA) / "DiminutiveVaultCoin";
 #else
     fs::path pathRet;
     char* pszHome = getenv("HOME");
@@ -972,10 +971,10 @@ boost::filesystem::path GetDefaultDataDir()
     // Mac
     pathRet /= "Library/Application Support";
     fs::create_directory(pathRet);
-    return pathRet / "ESP";
+    return pathRet / "DiminutiveVaultCoin";
 #else
     // Unix
-    return pathRet / ".ESP";
+    return pathRet / ".diminutivevaultcoin";
 #endif
 #endif
 }
@@ -1024,9 +1023,8 @@ void ClearDatadirCache()
 
 boost::filesystem::path GetConfigFile()
 {
-    boost::filesystem::path pathConfigFile(GetArg("-conf", "Espers.conf"));
+    boost::filesystem::path pathConfigFile(GetArg("-conf", "diminutivevaultcoin.conf"));
     if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir(false) / pathConfigFile;
-
     return pathConfigFile;
 }
 
@@ -1039,47 +1037,36 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
     if (!streamConfig.good())
     {
         boost::filesystem::path ConfPath;
-               ConfPath = GetDataDir() / "Espers.conf";
+               ConfPath = GetDataDir() / "diminutivevaultcoin.conf";
                FILE* ConfFile = fopen(ConfPath.string().c_str(), "w");
-               fprintf(ConfFile, "listen=1\n");
                fprintf(ConfFile, "server=1\n");
-               fprintf(ConfFile, "maxconnections=500\n");
-               fprintf(ConfFile, "rpcuser=yourusername\n");
+               fprintf(ConfFile, "maxconnections=250\n");
+               fprintf(ConfFile, "rpcuser=DiminutiveWalletUser\n");
 
-               char s[34];
-               for (int i = 0; i < 34; ++i)
+               char s[32];
+               for (int i = 0; i < 32; ++i)
                {
                    s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
                }
 
-               std::string str(s, 34);
-               std::string rpcpass = "rpcpassword=" + str + "\n";
-               fprintf(ConfFile, rpcpass.c_str());
-               fprintf(ConfFile, "port=22448\n");
-               fprintf(ConfFile, "rpcport=22442\n");
-               fprintf(ConfFile, "rpcconnect=127.0.0.1\n");
-               fprintf(ConfFile, "addnode=173.212.230.232:22448\n");
-               fprintf(ConfFile, "addnode=46.4.27.201:22448\n");
-               fprintf(ConfFile, "addnode=80.211.178.121:22448\n");
-               fprintf(ConfFile, "addnode=109.196.145.250:22448\n");
-               fprintf(ConfFile, "addnode=94.177.246.216:22448\n");
-               fprintf(ConfFile, "addnode=[2002:2a33:21c4::2a33:21c4]:22448\n");
-               fprintf(ConfFile, "addnode=18.218.64.210:22448\n");
-               fprintf(ConfFile, "addnode=76.171.67.113:22448\n");
-               fprintf(ConfFile, "addnode=94.130.26.162:22448\n");
-               fprintf(ConfFile, "addnode=[2a00:ee2:300:d00:6944:3ce8:83af:bf45]:22448\n");
-               fprintf(ConfFile, "addnode=[2001:0:9d38:90d7:28d2:daf0:a43f:a654]:22448\n");
-               fprintf(ConfFile, "addnode=[2001:0:9d38:6abd:245d:169a:34c0:5adf]:22448\n");
-               fprintf(ConfFile, "addnode=[2a01:e35:2fdf:73d0:dc0f:2dc0:6e68:9cb1]:22448\n");
-               fprintf(ConfFile, "addnode=[2001:0:9d38:90d7:107b:3ce5:b052:c968]:22448\n");
+std::string str(s);
+std::string rpcpass = "rpcpassword=" + str + "\n";
+fprintf(ConfFile, rpcpass.c_str());
+fprintf(ConfFile, "#addnode= list was created 2020 03 05 - Add your own \n");
+fprintf(ConfFile, "addnode=51.38.71.12\n");   
+fprintf(ConfFile, "addnode=51.75.162.95\n"); 
+fprintf(ConfFile, "addnode=86.7.19.14\n");
+fprintf(ConfFile, "addnode=92.38.140.8\n");
+fprintf(ConfFile, "addnode=50.245.85.75\n");
 
                fclose(ConfFile);
 
-               // Returns our config path, created config file is loaded during initial run...
+               // Returns our config path, created config file is NOT loaded first time...
+               // Wallet will need to be reloaded before config file is properly read...
                return ;
     }
 
-    // Wallet will reload config file so it is properly read...
+    // loop back and load config for initial generation
     if (confLoop < 1)
     {
         ++confLoop;
@@ -1091,7 +1078,7 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
 
     for (boost::program_options::detail::config_file_iterator it(streamConfig, setOptions), end; it != end; ++it)
     {
-        // Don't overwrite existing settings so command line settings override bitcoin.conf
+        // Don't overwrite existing settings so command line settings override diminutivevaultcoin.conf
         string strKey = string("-") + it->string_key;
         if (mapSettingsRet.count(strKey) == 0)
         {
@@ -1107,7 +1094,7 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
 
 boost::filesystem::path GetPidFile()
 {
-    boost::filesystem::path pathPidFile(GetArg("-pid", "Espersd.pid"));
+    boost::filesystem::path pathPidFile(GetArg("-pid", "diminutivevaultcoind.pid"));
     if (!pathPidFile.is_complete()) pathPidFile = GetDataDir() / pathPidFile;
     return pathPidFile;
 }
@@ -1215,7 +1202,7 @@ string FormatFullVersion()
     return CLIENT_BUILD;
 }
 
-// Format the subversion field according to BIP 14 spec (https://en.bitcoin.it/wiki/BIP_0014)
+// Format the subversion field according to BIP 14 spec (https://en.diminutivevaultcoin.it/wiki/BIP_0014)
 std::string FormatSubVersion(const std::string& name, int nClientVersion, const std::vector<std::string>& comments)
 {
     std::ostringstream ss;

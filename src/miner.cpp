@@ -1,21 +1,19 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Copyright (c) 2013 The NovaCoin developers
-// Copyright (c) 2016-2018 The CryptoCoderz Team / Espers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "blockparams.h"
 #include "txdb.h"
 #include "miner.h"
 #include "kernel.h"
-#include "velocity.h"
+#include "hashblock.h"
 
 using namespace std;
 
 //////////////////////////////////////////////////////////////////////////////
 //
-// BitcoinMiner
+// DiminutiveVaultCoinMiner
 //
 
 extern unsigned int nMinerSleep;
@@ -62,13 +60,12 @@ class COrphan
 public:
     CTransaction* ptx;
     set<uint256> setDependsOn;
-    double dPriority;
     double dFeePerKb;
 
     COrphan(CTransaction* ptxIn)
     {
         ptx = ptxIn;
-        dPriority = dFeePerKb = 0;
+        dFeePerKb = 0;
     }
 };
 
@@ -76,28 +73,15 @@ public:
 uint64_t nLastBlockTx = 0;
 uint64_t nLastBlockSize = 0;
 int64_t nLastCoinStakeSearchInterval = 0;
- 
-// We want to sort transactions by priority and fee, so:
-typedef boost::tuple<double, double, CTransaction*> TxPriority;
+
+// We want to sort transactions by fee, so:
+typedef boost::tuple<double, CTransaction*> TxPriority;
 class TxPriorityCompare
 {
-    bool byFee;
 public:
-    TxPriorityCompare(bool _byFee) : byFee(_byFee) { }
     bool operator()(const TxPriority& a, const TxPriority& b)
     {
-        if (byFee)
-        {
-            if (a.get<1>() == b.get<1>())
-                return a.get<0>() < b.get<0>();
-            return a.get<1>() < b.get<1>();
-        }
-        else
-        {
-            if (a.get<0>() == b.get<0>())
-                return a.get<1>() < b.get<1>();
-            return a.get<0>() < b.get<0>();
-        }
+        return a.get<0>() < b.get<0>();
     }
 };
 
@@ -105,7 +89,7 @@ public:
 CBlock* CreateNewBlock(CReserveKey& reservekey, bool fProofOfStake, int64_t* pFees)
 {
     // Create new block
-    auto_ptr<CBlock> pblock(new CBlock());
+    std::unique_ptr<CBlock> pblock(new CBlock());
     if (!pblock.get())
         return NULL;
 
@@ -141,11 +125,6 @@ CBlock* CreateNewBlock(CReserveKey& reservekey, bool fProofOfStake, int64_t* pFe
     unsigned int nBlockMaxSize = GetArg("-blockmaxsize", MAX_BLOCK_SIZE_GEN/2);
     // Limit to betweeen 1K and MAX_BLOCK_SIZE-1K for sanity:
     nBlockMaxSize = std::max((unsigned int)1000, std::min((unsigned int)(MAX_BLOCK_SIZE-1000), nBlockMaxSize));
-
-    // How much of the block should be dedicated to high-priority transactions,
-    // included regardless of the fees they pay
-    unsigned int nBlockPrioritySize = GetArg("-blockprioritysize", 27000);
-    nBlockPrioritySize = std::min(nBlockMaxSize, nBlockPrioritySize);
 
     // Minimum block size you want to create; block will be filled with free transactions
     // until there are no more or the block reaches this size:
@@ -183,7 +162,6 @@ CBlock* CreateNewBlock(CReserveKey& reservekey, bool fProofOfStake, int64_t* pFe
                 continue;
 
             COrphan* porphan = NULL;
-            double dPriority = 0;
             int64_t nTotalIn = 0;
             bool fMissingInputs = false;
             BOOST_FOREACH(const CTxIn& txin, tx.vin)
@@ -220,15 +198,11 @@ CBlock* CreateNewBlock(CReserveKey& reservekey, bool fProofOfStake, int64_t* pFe
                 }
                 int64_t nValueIn = txPrev.vout[txin.prevout.n].nValue;
                 nTotalIn += nValueIn;
-
-                int nConf = txindex.GetDepthInMainChain();
-                dPriority += (double)nValueIn * nConf;
             }
             if (fMissingInputs) continue;
 
             // Priority is sum(valuein * age) / txsize
             unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);
-            dPriority /= nTxSize;
 
             // This is a more accurate fee-per-kilobyte than is used by the client code, because the
             // client code rounds up the size to the nearest 1K. That's good, because it gives an
@@ -237,11 +211,10 @@ CBlock* CreateNewBlock(CReserveKey& reservekey, bool fProofOfStake, int64_t* pFe
 
             if (porphan)
             {
-                porphan->dPriority = dPriority;
                 porphan->dFeePerKb = dFeePerKb;
             }
             else
-                vecPriority.push_back(TxPriority(dPriority, dFeePerKb, &(*mi).second));
+                vecPriority.push_back(TxPriority(dFeePerKb, &(*mi).second));
         }
 
         // Collect transactions into block
@@ -249,17 +222,15 @@ CBlock* CreateNewBlock(CReserveKey& reservekey, bool fProofOfStake, int64_t* pFe
         uint64_t nBlockSize = 1000;
         uint64_t nBlockTx = 0;
         int nBlockSigOps = 100;
-        bool fSortedByFee = (nBlockPrioritySize <= 0);
 
-        TxPriorityCompare comparer(fSortedByFee);
+        TxPriorityCompare comparer;
         std::make_heap(vecPriority.begin(), vecPriority.end(), comparer);
 
         while (!vecPriority.empty())
         {
             // Take highest priority transaction off the priority queue:
-            double dPriority = vecPriority.front().get<0>();
-            double dFeePerKb = vecPriority.front().get<1>();
-            CTransaction& tx = *(vecPriority.front().get<2>());
+            double dFeePerKb = vecPriority.front().get<0>();
+            CTransaction& tx = *(vecPriority.front().get<1>());
 
             std::pop_heap(vecPriority.begin(), vecPriority.end(), comparer);
             vecPriority.pop_back();
@@ -282,18 +253,8 @@ CBlock* CreateNewBlock(CReserveKey& reservekey, bool fProofOfStake, int64_t* pFe
             int64_t nMinFee = GetMinFee(tx, nBlockSize, GMF_BLOCK);
 
             // Skip free transactions if we're past the minimum block size:
-            if (fSortedByFee && (dFeePerKb < nMinTxFee) && (nBlockSize + nTxSize >= nBlockMinSize))
+            if ((dFeePerKb < nMinTxFee) && (nBlockSize + nTxSize >= nBlockMinSize))
                 continue;
-
-            // Prioritize by fee once past the priority size or we run out of high-priority
-            // transactions:
-            if (!fSortedByFee &&
-                ((nBlockSize + nTxSize >= nBlockPrioritySize) || (dPriority < COIN * 144 / 250)))
-            {
-                fSortedByFee = true;
-                comparer = TxPriorityCompare(fSortedByFee);
-                std::make_heap(vecPriority.begin(), vecPriority.end(), comparer);
-            }
 
             // Connecting shouldn't fail due to dependency on other memory pool transactions
             // because we're already processing them in order of dependency
@@ -328,8 +289,8 @@ CBlock* CreateNewBlock(CReserveKey& reservekey, bool fProofOfStake, int64_t* pFe
 
             if (fDebug && GetBoolArg("-printpriority", false))
             {
-                LogPrintf("priority %.1f feeperkb %.1f txid %s\n",
-                       dPriority, dFeePerKb, tx.GetHash().ToString());
+                LogPrintf("feeperkb %.1f txid %s\n",
+                       dFeePerKb, tx.GetHash().ToString());
             }
 
             // Add transactions that depend on this one to the priority queue
@@ -343,7 +304,7 @@ CBlock* CreateNewBlock(CReserveKey& reservekey, bool fProofOfStake, int64_t* pFe
                         porphan->setDependsOn.erase(hash);
                         if (porphan->setDependsOn.empty())
                         {
-                            vecPriority.push_back(TxPriority(porphan->dPriority, porphan->dFeePerKb, porphan->ptx));
+                            vecPriority.push_back(TxPriority(porphan->dFeePerKb, porphan->ptx));
                             std::push_heap(vecPriority.begin(), vecPriority.end(), comparer);
                         }
                     }
@@ -358,7 +319,7 @@ CBlock* CreateNewBlock(CReserveKey& reservekey, bool fProofOfStake, int64_t* pFe
             LogPrintf("CreateNewBlock(): total size %u\n", nBlockSize);
 
         if (!fProofOfStake)
-            pblock->vtx[0].vout[0].nValue = GetProofOfWorkReward(nHeight, nFees);
+            pblock->vtx[0].vout[0].nValue = GetProofOfWorkReward(nFees, nHeight);
 
         if (pFees)
             *pFees = nFees;
@@ -446,12 +407,6 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
     uint256 hashProof = pblock->GetHash();
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
-    // Velocity enforcement prior to final checks
-    //int nHeight_v = pindexBest->nHeight;
-    //int i = VelocityI(nHeight_v);
-    //if((pblock->GetBlockTime() - pindexBest->GetBlockTime()) < VELOCITY_MIN_RATE[i]) // Check for minimum spacing
-        //return error("CheckWork(): Velocity constraint failure, Not enough spacing from previous block");
-
     if(!pblock->IsProofOfWork())
         return error("CheckWork() : %s is not a proof-of-work block", hashBlock.GetHex());
 
@@ -491,12 +446,6 @@ bool CheckStake(CBlock* pblock, CWallet& wallet)
     uint256 proofHash = 0, hashTarget = 0;
     uint256 hashBlock = pblock->GetHash();
 
-    // Velocity enforcement prior to final checks
-    //int nHeight_v = pindexBest->nHeight;
-    //int i = VelocityI(nHeight_v);
-    //if((pblock->GetBlockTime() - pindexBest->GetBlockTime()) < VELOCITY_MIN_RATE[i]) // Check for minimum spacing
-        //return error("CheckStake(): Velocity constraint failure, Not enough spacing from previous block");
-
     if(!pblock->IsProofOfStake())
         return error("CheckStake() : %s is not a proof-of-stake block", hashBlock.GetHex());
 
@@ -534,7 +483,7 @@ void ThreadStakeMiner(CWallet *pwallet)
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
 
     // Make this thread recognisable as the mining thread
-    RenameThread("Espers-miner");
+    RenameThread("diminutivevaultcoin-miner");
 
     CReserveKey reservekey(pwallet);
 
@@ -569,7 +518,7 @@ void ThreadStakeMiner(CWallet *pwallet)
         // Create new block
         //
         int64_t nFees;
-        auto_ptr<CBlock> pblock(CreateNewBlock(reservekey, true, &nFees));
+        std::unique_ptr<CBlock> pblock(CreateNewBlock(reservekey, true, &nFees));
         if (!pblock.get())
             return;
 

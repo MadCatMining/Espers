@@ -2,8 +2,8 @@
 // Copyright (c) 2009-2013 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#ifndef ESPERS_KEY_H
-#define ESPERS_KEY_H
+#ifndef DIMINUTIVEVAULT_KEY_H
+#define DIMINUTIVEVAULT_KEY_H
 
 #include <vector>
 
@@ -270,9 +270,6 @@ public:
 
     // Check whether an element of a signature (r or s) is valid.
     static bool CheckSignatureElement(const unsigned char *vch, int len, bool half);
-
-    // Ensure that signature is DER-encoded
-    static bool ReserealizeSignature(std::vector<unsigned char>& vchSig);
 };
 
 struct CExtPubKey {

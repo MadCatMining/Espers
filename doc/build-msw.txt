@@ -7,7 +7,7 @@ cryptographic software written by Eric Young (eay@cryptsoft.com) and UPnP
 software written by Thomas Bernard.
 
 
-See readme-qt.rst for instructions on building Espers QT, the
+See readme-qt.rst for instructions on building DiminutiveVaultCoin QT, the
 graphical user interface.
 
 WINDOWS BUILD NOTES
@@ -76,9 +76,9 @@ make -f Makefile.mingw
 mkdir miniupnpc
 cp *.h miniupnpc/
 
-Espers
+DiminutiveVaultCoin
 -------
 DOS prompt:
-cd \Espers\src
+cd \diminutivevaultcoin\src
 mingw32-make -f makefile.mingw
-strip Espersd.exe
+strip diminutivevaultcoind.exe

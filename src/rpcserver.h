@@ -3,8 +3,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef _BITCOINRPC_SERVER_H_
-#define _BITCOINRPC_SERVER_H_ 1
+#ifndef _DIMINUTIVEVAULTRPC_SERVER_H_
+#define _DIMINUTIVEVAULTRPC_SERVER_H_ 1
 
 #include "uint256.h"
 #include "rpcprotocol.h"
@@ -50,7 +50,7 @@ public:
 };
 
 /**
- * Bitcoin RPC command dispatcher.
+ * DiminutiveVaultCoin RPC command dispatcher.
  */
 class CRPCTable
 {
@@ -77,7 +77,7 @@ extern void InitRPCMining();
 extern void ShutdownRPCMining();
 
 extern int64_t nWalletUnlockTime;
-extern int64_t AmountFromValue(const json_spirit::Value& value);
+extern int64_t AmountFromValue(const json_spirit::Value& value, bool allowZero = false);
 extern json_spirit::Value ValueFromAmount(int64_t amount);
 extern double GetDifficulty(const CBlockIndex* blockindex = NULL);
 
@@ -86,8 +86,6 @@ extern double GetPoSKernelPS();
 
 extern std::string HelpRequiringPassphrase();
 extern void EnsureWalletIsUnlocked();
-
-extern int64_t GetPrevAccountBalance;
 
 //
 // Utilities: convert hex-encoded Values
@@ -110,8 +108,6 @@ extern json_spirit::Value importwallet(const json_spirit::Array& params, bool fH
 extern json_spirit::Value dumpprivkey(const json_spirit::Array& params, bool fHelp); // in rpcdump.cpp
 extern json_spirit::Value importprivkey(const json_spirit::Array& params, bool fHelp);
 
-extern json_spirit::Value sendalert(const json_spirit::Array& params, bool fHelp);
-
 extern json_spirit::Value getsubsidy(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getstakesubsidy(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getmininginfo(const json_spirit::Array& params, bool fHelp);
@@ -128,6 +124,7 @@ extern json_spirit::Value setaccount(const json_spirit::Array& params, bool fHel
 extern json_spirit::Value getaccount(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getaddressesbyaccount(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value sendtoaddress(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value burn(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value signmessage(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value verifymessage(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getreceivedbyaddress(const json_spirit::Array& params, bool fHelp);

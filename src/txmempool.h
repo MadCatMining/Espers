@@ -2,10 +2,11 @@
 // Copyright (c) 2009-2013 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#ifndef ESPERS_TXMEMPOOL_H
-#define ESPERS_TXMEMPOOL_H
+#ifndef DIMINUTIVEVAULT_TXMEMPOOL_H
+#define DIMINUTIVEVAULT_TXMEMPOOL_H
 
 #include "core.h"
+#include "sync.h"
 
 /*
  * CTxMemPool stores valid-according-to-the-current-best-chain
@@ -52,4 +53,4 @@ public:
     bool lookup(uint256 hash, CTransaction& result) const;
 };
 
-#endif /* ESPERS_TXMEMPOOL_H */
+#endif /* DIMINUTIVEVAULT_TXMEMPOOL_H */

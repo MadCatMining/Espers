@@ -3,8 +3,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef ESPERS_LEVELDB_H
-#define ESPERS_LEVELDB_H
+#ifndef DIMINUTIVEVAULT_LEVELDB_H
+#define DIMINUTIVEVAULT_LEVELDB_H
 
 #include "main.h"
 
@@ -197,14 +197,10 @@ public:
     bool WriteHashBestChain(uint256 hashBestChain);
     bool ReadBestInvalidTrust(CBigNum& bnBestInvalidTrust);
     bool WriteBestInvalidTrust(CBigNum bnBestInvalidTrust);
-    bool ReadSyncCheckpoint(uint256& hashCheckpoint);
-    bool WriteSyncCheckpoint(uint256 hashCheckpoint);
-    bool ReadCheckpointPubKey(std::string& strPubKey);
-    bool WriteCheckpointPubKey(const std::string& strPubKey);
     bool LoadBlockIndex();
 private:
     bool LoadBlockIndexGuts();
 };
 
 
-#endif // ESPERS_DB_H
+#endif // DIMINUTIVEVAULT_DB_H
